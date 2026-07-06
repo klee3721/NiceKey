@@ -1,17 +1,29 @@
 # NiceKey
 
-NiceKey là bộ gõ tiếng Việt nguồn mở cho macOS, được fork từ OpenKey để tiếp tục phát triển theo hướng riêng. Dự án giữ nguyên tinh thần phần mềm tự do, tuân thủ GPL-3.0 và bảo toàn ghi nhận đối với tác giả, contributor của OpenKey.
+[Tải NiceKey 1.0.0 cho macOS (.dmg)](https://github.com/klee3721/NiceKey/releases/download/v1.0.0/NiceKey-1.0.0.dmg)
 
-- Repository: https://github.com/klee3721/NiceKey
-- Liên hệ phát triển: Telegram [@kienvu37](https://t.me/kienvu37)
+NiceKey là bộ gõ tiếng Việt nguồn mở cho macOS, được phát triển từ nền tảng OpenKey. Mục tiêu của NiceKey là giữ lại phần lõi gõ tiếng Việt ổn định, nhẹ và quen thuộc, đồng thời tách thành một nhánh phát triển riêng với trải nghiệm cài đặt, nhận diện app và cấu hình phát hành rõ ràng hơn.
 
-## Trạng thái hiện tại
+NiceKey vẫn tuân thủ GPL-3.0 và giữ đầy đủ ghi nhận đối với tác giả, contributor của OpenKey gốc.
 
-- App macOS đã được đổi tên hiển thị thành NiceKey.
-- Bundle id macOS đã đổi sang `com.nicekey.NiceKey`.
-- Version fork bắt đầu tại `1.0.0` build `1`.
-- Link repository, release và liên hệ đã được cấu hình cho NiceKey.
-- Các link cá nhân, donation, fanpage và email của dự án gốc đã được gỡ khỏi tài liệu chính.
+Liên hệ phát triển: Telegram [@kienvu37](https://t.me/kienvu37)
+
+## Cải tiến so với OpenKey gốc
+
+- Tách nhận diện thành NiceKey với bundle id riêng `com.nicekey.NiceKey`, tránh lẫn với OpenKey khi cài đặt, cấp quyền và phát triển tiếp.
+- Làm lại luồng cấp quyền lần đầu: app chỉ mở bảng cấp quyền Accessibility, sau khi người dùng cấp quyền sẽ thông báo, tự thoát và mở lại để kích hoạt bộ gõ sạch từ đầu.
+- Bổ sung lịch sử Clipboard từ mkey, có popup danh sách clipboard, cấu hình phím tắt và giới hạn 30 mục gần nhất.
+- Dọn lại phần giới thiệu, liên hệ, release và thông tin giấy phép cho nhánh NiceKey.
+- Đóng gói DMG kiểu kéo thả đơn giản: mở file cài chỉ thấy `NiceKey.app` và `Applications`.
+- Tắt các liên kết cá nhân/donation của dự án gốc trong tài liệu chính, đồng thời vẫn giữ giấy phép và ghi nhận nguồn mở đầy đủ.
+
+## Cài đặt
+
+Tải file DMG mới nhất:
+
+[NiceKey-1.0.0.dmg](https://github.com/klee3721/NiceKey/releases/download/v1.0.0/NiceKey-1.0.0.dmg)
+
+Mở file `.dmg`, kéo `NiceKey.app` vào thư mục `Applications`, sau đó mở NiceKey từ Applications.
 
 ## Build macOS
 
