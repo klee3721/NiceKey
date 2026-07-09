@@ -8,6 +8,16 @@ NiceKey vẫn tuân thủ GPL-3.0 và giữ đầy đủ ghi nhận đối với
 
 Liên hệ phát triển: Telegram [@kienvu37](https://t.me/kienvu37)
 
+## Demo
+
+<p align="center">
+  <img src="assets/demo-main.png" alt="Cua so cau hinh NiceKey" width="560">
+</p>
+
+<p align="center">
+  <img src="assets/demo-menu.png" alt="Menu NiceKey tren thanh trang thai macOS" width="280">
+</p>
+
 ## Cải tiến so với OpenKey gốc
 
 - Tách nhận diện thành NiceKey với bundle id riêng `com.nicekey.NiceKey`, tránh lẫn với OpenKey khi cài đặt, cấp quyền và phát triển tiếp.
