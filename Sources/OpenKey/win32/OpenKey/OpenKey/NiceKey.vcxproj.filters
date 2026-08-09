@@ -54,6 +54,9 @@
     <ClInclude Include="BaseDialog.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ClipboardHistory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="MainControlDialog.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -113,6 +116,9 @@
     <ClCompile Include="BaseDialog.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ClipboardHistory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MainControlDialog.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -139,7 +145,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="OpenKey.rc">
+    <ResourceCompile Include="NiceKey.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>

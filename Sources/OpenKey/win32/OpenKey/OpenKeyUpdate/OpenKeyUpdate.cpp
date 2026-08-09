@@ -15,6 +15,7 @@ redistribute your new version, it MUST be open source.
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <shellapi.h>
 #pragma comment(lib, "Urlmon.lib")
 
 using namespace std;
@@ -69,7 +70,7 @@ INT_PTR CALLBACK MainDialogProcess(HWND hDlg, UINT message, WPARAM wParam, LPARA
 }
 
 DWORD WINAPI UpdateThreadFunction(LPVOID lpParam) {
-	MessageBox(hDlg, _T("NiceKey chưa cấu hình nguồn cập nhật."), _T("NiceKey Update"), MB_OK);
+	ShellExecuteW(hDlg, L"open", L"https://github.com/klee3721/NiceKey/releases", nullptr, nullptr, SW_SHOWNORMAL);
 	ExitProcess(0);
 	return 0;
 }

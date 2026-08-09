@@ -31,6 +31,8 @@ redistribute your new version, it MUST be open source.
 
 #define POPUP_CONVERT_TOOL 980
 #define POPUP_QUICK_CONVERT 981
+#define POPUP_CLIPBOARD_HISTORY 970
+#define POPUP_CLIPBOARD_SETTINGS 971
 
 #define POPUP_MACRO_TABLE 990
 
@@ -64,6 +66,8 @@ map<UINT, LPCTSTR> menuData = {
 	{POPUP_VN_LOCALE_1258, _T("Vietnamese locale CP 1258")},
 	{POPUP_CONVERT_TOOL, _T("Công cụ chuyển mã...")},
 	{POPUP_QUICK_CONVERT, _T("Chuyển mã nhanh")},
+	{POPUP_CLIPBOARD_HISTORY, _T("Lịch sử Clipboard")},
+	{POPUP_CLIPBOARD_SETTINGS, _T("Cài đặt Clipboard...")},
 	{POPUP_MACRO_TABLE, _T("Cấu hình gõ tắt...")},
 	{POPUP_CONTROL_PANEL, _T("Bảng điều khiển...")},
 	{POPUP_ABOUT_OPENKEY, _T("Giới thiệu NiceKey")},
@@ -121,6 +125,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 				break;
 			case POPUP_QUICK_CONVERT:
 				AppDelegate::getInstance()->onQuickConvert();
+				break;
+			case POPUP_CLIPBOARD_HISTORY:
+				AppDelegate::getInstance()->onClipboardHistory();
+				break;
+			case POPUP_CLIPBOARD_SETTINGS:
+				AppDelegate::getInstance()->onClipboardHistorySettings();
 				break;
 			case POPUP_TELEX:
 				AppDelegate::getInstance()->onInputType(0);
@@ -207,6 +217,9 @@ void SystemTrayHelper::createPopupMenu() {
 	AppendMenu(popupMenu, MF_UNCHECKED, POPUP_MACRO_TABLE, menuData[POPUP_MACRO_TABLE]);
 	AppendMenu(popupMenu, MF_UNCHECKED, POPUP_CONVERT_TOOL, menuData[POPUP_CONVERT_TOOL]);
 	AppendMenu(popupMenu, MF_UNCHECKED, POPUP_QUICK_CONVERT, menuData[POPUP_QUICK_CONVERT]);
+	AppendMenu(popupMenu, MF_SEPARATOR, 0, 0);
+	AppendMenu(popupMenu, MF_UNCHECKED, POPUP_CLIPBOARD_HISTORY, menuData[POPUP_CLIPBOARD_HISTORY]);
+	AppendMenu(popupMenu, MF_UNCHECKED, POPUP_CLIPBOARD_SETTINGS, menuData[POPUP_CLIPBOARD_SETTINGS]);
 	AppendMenu(popupMenu, MF_SEPARATOR, 0, 0);
 
 	//menuInputType = CreatePopupMenu();
@@ -308,6 +321,19 @@ void SystemTrayHelper::updateData() {
 		hotKeyString += L"]";
 	}
 	ModifyMenu(popupMenu, POPUP_QUICK_CONVERT, MF_BYCOMMAND | MF_UNCHECKED, POPUP_QUICK_CONVERT, hotKeyString.c_str());
+
+	ClipboardHistory& clipboard = ClipboardHistory::shared();
+	wchar_t clipboardLabel[256] = {};
+	if (clipboard.isEnabled()) {
+		wsprintfW(clipboardLabel, L"Lịch sử Clipboard (%d/%d) - [%s]",
+			clipboard.itemCount(), ClipboardHistory::kMaxItems, clipboard.hotKeyDescription().c_str());
+	} else {
+		wcscpy_s(clipboardLabel, L"Lịch sử Clipboard (đã tắt)");
+	}
+	ModifyMenu(popupMenu, POPUP_CLIPBOARD_HISTORY, MF_BYCOMMAND | MF_UNCHECKED,
+		POPUP_CLIPBOARD_HISTORY, clipboardLabel);
+	EnableMenuItem(popupMenu, POPUP_CLIPBOARD_HISTORY,
+		MF_BYCOMMAND | (clipboard.isEnabled() ? MF_ENABLED : MF_GRAYED));
 }
 
 static HINSTANCE ins;

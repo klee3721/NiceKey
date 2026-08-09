@@ -71,12 +71,7 @@ void AppDelegate::checkUpdate() {
 			MB_ICONEXCLAMATION | MB_YESNO
 		);
 		if (msgboxID == IDYES) {
-			//Call OpenKeyUpdate
-			WCHAR path[MAX_PATH];
-			GetCurrentDirectory(MAX_PATH, path);
-			wsprintf(path, TEXT("%s\\OpenKeyUpdate.exe"), path);
-			ShellExecute(0, L"", path, 0, 0, SW_SHOWNORMAL);
-			AppDelegate::getInstance()->onOpenKeyExit();
+			OpenKeyManager::openReleasePage();
 		}
 
 	}
@@ -104,6 +99,7 @@ int AppDelegate::run(HINSTANCE hInstance) {
 
 	//init OpenKey Engine
 	OpenKeyManager::initEngine();
+	ClipboardHistory::shared().initialize(hInstance);
 
 	//create system tray
 	SystemTrayHelper::createSystemTrayIcon(hInstance);
@@ -121,6 +117,9 @@ int AppDelegate::run(HINSTANCE hInstance) {
 	MSG msg;
 	// Main message loop:
 	while (GetMessage(&msg, nullptr, 0, 0))	{
+		if (ClipboardHistory::shared().preTranslateMessage(msg)) {
+			continue;
+		}
 		if (msg.message == WM_KEYDOWN) {
 			OpenKeyManager::_lastKeyCode = (UINT16)msg.wParam;
 		}
@@ -194,6 +193,7 @@ void AppDelegate::onDefaultConfig() {
 	APP_SET_DATA(vOtherLanguage, 1);
 	APP_SET_DATA(vTempOffOpenKey, 0);
 	APP_SET_DATA(vFixChromiumBrowser, 0);
+	ClipboardHistory::shared().resetSettings();
 
 	if (mainDialog) {
 		mainDialog->fillData();
@@ -287,6 +287,14 @@ void AppDelegate::onControlPanel() {
 	createMainDialog();
 }
 
+void AppDelegate::onClipboardHistory() {
+	ClipboardHistory::shared().togglePicker();
+}
+
+void AppDelegate::onClipboardHistorySettings() {
+	ClipboardHistory::shared().showSettings(mainDialog ? mainDialog->getHwnd() : nullptr);
+}
+
 void AppDelegate::onOpenKeyAbout() {
 	if (aboutDialog == NULL) {
 		aboutDialog = new AboutDialog(hInstance, IDD_ABOUTBOX);
@@ -297,6 +305,7 @@ void AppDelegate::onOpenKeyAbout() {
 }
 
 void AppDelegate::onOpenKeyExit() {
+	ClipboardHistory::shared().shutdown();
 	OpenKeyManager::freeEngine();
 	SystemTrayHelper::removeSystemTray();
 	PostQuitMessage(0);

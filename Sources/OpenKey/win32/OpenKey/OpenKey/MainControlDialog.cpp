@@ -233,12 +233,15 @@ INT_PTR MainControlDialog::eventProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM
         case IDC_BUTTON_MACRO_TABLE:
             AppDelegate::getInstance()->onMacroTable();
             break;
-        case IDC_BUTTON_CHECK_UPDATE:
-            onUpdateButton();
-            break;
-        case IDC_BUTTON_GO_SOURCE_CODE:
-            MessageBox(hDlg, _T("Chưa cấu hình repository NiceKey."), _T("NiceKey"), MB_OK);
-            break;
+	    case IDC_BUTTON_CHECK_UPDATE:
+	        onUpdateButton();
+	        break;
+	    case IDC_BUTTON_CLIPBOARD_SETTINGS:
+	        AppDelegate::getInstance()->onClipboardHistorySettings();
+	        break;
+	    case IDC_BUTTON_GO_SOURCE_CODE:
+	        ShellExecuteW(nullptr, L"open", L"https://github.com/klee3721/NiceKey", nullptr, nullptr, SW_SHOWNORMAL);
+	        break;
         default:
             if (HIWORD(wParam) == CBN_SELCHANGE) {
                 this->onComboBoxSelected((HWND)lParam, LOWORD(wParam));
@@ -265,12 +268,10 @@ INT_PTR MainControlDialog::eventProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM
         case NM_CLICK:
         case NM_RETURN: {
             PNMLINK link = (PNMLINK)lParam;
-            if (link->hdr.idFrom == IDC_SYSLINK_HOME_PAGE)
-                MessageBox(hDlg, _T("Chưa cấu hình trang chủ NiceKey."), _T("NiceKey"), MB_OK);
-            else if (link->hdr.idFrom == IDC_SYSLINK_FANPAGE)
-                MessageBox(hDlg, _T("Chưa cấu hình liên hệ NiceKey."), _T("NiceKey"), MB_OK);
-            else if (link->hdr.idFrom == IDC_SYSLINK_AUTHOR_EMAIL)
-                MessageBox(hDlg, _T("Chưa cấu hình email hỗ trợ NiceKey."), _T("NiceKey"), MB_OK);
+	            if (link->hdr.idFrom == IDC_SYSLINK_HOME_PAGE)
+	                ShellExecuteW(nullptr, L"open", L"https://github.com/klee3721/NiceKey", nullptr, nullptr, SW_SHOWNORMAL);
+	            else if (link->hdr.idFrom == IDC_SYSLINK_FANPAGE || link->hdr.idFrom == IDC_SYSLINK_AUTHOR_EMAIL)
+	                ShellExecuteW(nullptr, L"open", L"https://t.me/kienvu37", nullptr, nullptr, SW_SHOWNORMAL);
             break;
         }
         }
@@ -613,13 +614,7 @@ void MainControlDialog::onUpdateButton() {
             MB_ICONEXCLAMATION | MB_YESNO
         );
         if (msgboxID == IDYES) {
-            //Call OpenKeyUpdate
-            WCHAR path[MAX_PATH];
-            GetCurrentDirectory(MAX_PATH, path);
-            wsprintf(path, TEXT("%s\\OpenKeyUpdate.exe"), path);
-            ShellExecute(0, L"", path, 0, 0, SW_SHOWNORMAL);
-
-            AppDelegate::getInstance()->onOpenKeyExit();
+	            OpenKeyManager::openReleasePage();
         }
 
     }

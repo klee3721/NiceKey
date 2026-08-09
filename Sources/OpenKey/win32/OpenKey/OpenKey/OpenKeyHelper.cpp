@@ -19,7 +19,7 @@ redistribute your new version, it MUST be open source.
 
 static BYTE* _regData = 0;
 
-static LPCTSTR sk = TEXT("SOFTWARE\\TuyenMai\\OpenKey");
+static LPCTSTR sk = TEXT("SOFTWARE\\NiceKey");
 static HKEY hKey;
 static LPCTSTR _runOnStartupKeyPath = _T("Software\\Microsoft\\Windows\\CurrentVersion\\Run");
 static TCHAR _executePath[MAX_PATH];
@@ -30,17 +30,17 @@ static HWND _tempWnd;
 static TCHAR _exePath[1024] = { 0 };
 static LPCTSTR _exeName = _exePath;
 static HANDLE _proc;
-static string _exeNameUtf8 = "TheOpenKeyProject";
+static string _exeNameUtf8 = "NiceKey";
 static string _unknownProgram = "UnknownProgram";
 
 int CF_RTF = RegisterClipboardFormat(_T("Rich Text Format"));
 int CF_HTML = RegisterClipboardFormat(_T("HTML Format"));
-int CF_OPENKEY = RegisterClipboardFormat(_T("OpenKey Format"));
+int CF_OPENKEY = RegisterClipboardFormat(_T("NiceKey Internal Clipboard"));
 
 void OpenKeyHelper::openKey() {
 	LONG nError = RegOpenKeyEx(HKEY_CURRENT_USER, sk, NULL, KEY_ALL_ACCESS, &hKey);
 	if (nError == ERROR_FILE_NOT_FOUND) 	{
-		nError = RegCreateKeyEx(HKEY_CURRENT_USER, sk, NULL, NULL, REG_OPTION_NON_VOLATILE, KEY_CREATE_SUB_KEY, NULL, &hKey, NULL);
+		nError = RegCreateKeyEx(HKEY_CURRENT_USER, sk, NULL, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKey, NULL);
 	}
 	if (nError) {
 		LOG(L"result %d\n", nError);
@@ -93,19 +93,20 @@ void OpenKeyHelper::registerRunOnStartup(const int& val) {
 		if (vRunAsAdmin) {
 			string path = wideStringToUtf8(getFullPath());
 			char buff[MAX_PATH];
-			sprintf_s(buff, "schtasks /create /sc onlogon /tn OpenKey /rl highest /tr \"%s\" /f", path.c_str());
+			sprintf_s(buff, "schtasks /create /sc onlogon /tn NiceKey /rl highest /tr \"%s\" /f", path.c_str());
 			WinExec(buff, SW_HIDE);
 		} else {
 			RegOpenKeyEx(HKEY_CURRENT_USER, _runOnStartupKeyPath, NULL, KEY_ALL_ACCESS, &hKey);
 			wstring path = getFullPath();
-			RegSetValueEx(hKey, _T("NiceKey"), 0, REG_SZ, (byte*)path.c_str(), ((DWORD)path.size() + 1) * sizeof(TCHAR));
+			wstring command = L"\"" + path + L"\"";
+			RegSetValueEx(hKey, _T("NiceKey"), 0, REG_SZ, (byte*)command.c_str(), ((DWORD)command.size() + 1) * sizeof(TCHAR));
 			RegCloseKey(hKey);
 		}
 	} else {
 		RegOpenKeyEx(HKEY_CURRENT_USER, _runOnStartupKeyPath, NULL, KEY_ALL_ACCESS, &hKey);
 		RegDeleteValue(hKey, _T("NiceKey"));
 		RegCloseKey(hKey);
-		WinExec("schtasks /delete  /tn OpenKey /f", SW_HIDE);
+		WinExec("schtasks /delete /tn NiceKey /f", SW_HIDE);
 	}
 }
 
@@ -133,8 +134,9 @@ string& OpenKeyHelper::getFrontMostAppExecuteName() {
 		return _unknownProgram;
 	}
 	_exeName = _tcsrchr(_exePath, '\\') + 1;
-	if (wcscmp(_exeName, _T("OpenKey64.exe")) == 0 ||
-		wcscmp(_exeName, _T("OpenKey32.exe")) == 0 || 
+	if (wcscmp(_exeName, _T("NiceKey64.exe")) == 0 ||
+		wcscmp(_exeName, _T("NiceKey32.exe")) == 0 ||
+		wcscmp(_exeName, _T("NiceKey.exe")) == 0 ||
 		wcscmp(_exeName, _T("explorer.exe")) == 0) {
 		return _exeNameUtf8;
 	}
@@ -197,6 +199,8 @@ void OpenKeyHelper::setClipboardText(LPCTSTR data, const int & len, const int& t
 	OpenClipboard(0);
 	EmptyClipboard();
 	SetClipboardData(type, hMem);
+	HGLOBAL marker = GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, sizeof(DWORD));
+	if (marker) SetClipboardData(CF_OPENKEY, marker);
 	CloseClipboard();
 }
 
@@ -305,16 +309,16 @@ wstring OpenKeyHelper::getVersionString() {
 wstring OpenKeyHelper::getContentOfUrl(LPCTSTR url){
 	WCHAR path[MAX_PATH];
 	GetTempPath2(MAX_PATH, path);
-	wsprintf(path, TEXT("%s\\_OpenKey.tempf"), path);
+	wsprintf(path, TEXT("%s\\_NiceKey.tempf"), path);
 	HRESULT res = URLDownloadToFile(NULL, url, path, 0, NULL);
 	
 	if (res == S_OK) {
-		std::wifstream t(path);
-		std::wstringstream buffer;
+		std::ifstream t(path, std::ios::binary);
+		std::stringstream buffer;
 		buffer << t.rdbuf();
 		t.close();
 		DeleteFile(path);
-		return buffer.str();
+		return utf8ToWideString(buffer.str());
 	} else if (res == E_OUTOFMEMORY) {
 		
 	} else if (res == INET_E_DOWNLOAD_FAILURE) {

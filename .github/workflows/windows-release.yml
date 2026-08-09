@@ -1,0 +1,93 @@
+name: Windows build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+      - windows-full
+    paths:
+      - "Sources/OpenKey/engine/**"
+      - "Sources/OpenKey/win32/**"
+      - ".github/workflows/windows-release.yml"
+      - "LICENSE"
+      - "NOTICE.md"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build x64
+        shell: pwsh
+        run: msbuild Sources/OpenKey/win32/OpenKey/NiceKey.sln /m /p:Configuration=Release /p:Platform=x64
+
+      - name: Build x86
+        shell: pwsh
+        run: msbuild Sources/OpenKey/win32/OpenKey/NiceKey.sln /m /p:Configuration=Release /p:Platform=x86
+
+      - name: Locate and test executables
+        id: binaries
+        shell: pwsh
+        run: |
+          $x64 = Get-ChildItem Sources/OpenKey/win32/OpenKey -Recurse -Filter NiceKey64.exe | Select-Object -First 1
+          $x86 = Get-ChildItem Sources/OpenKey/win32/OpenKey -Recurse -Filter NiceKey32.exe | Select-Object -First 1
+          if (-not $x64 -or -not $x86) { throw "Không tìm thấy đủ NiceKey64.exe và NiceKey32.exe" }
+          & $x64.FullName --self-test
+          if ($LASTEXITCODE -ne 0) { throw "Self-test x64 thất bại: $LASTEXITCODE" }
+          & $x86.FullName --self-test
+          if ($LASTEXITCODE -ne 0) { throw "Self-test x86 thất bại: $LASTEXITCODE" }
+          "x64=$($x64.FullName)" >> $env:GITHUB_OUTPUT
+          "x86=$($x86.FullName)" >> $env:GITHUB_OUTPUT
+
+      - name: Create portable package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist/portable/x64, dist/portable/x86, dist/portable/Licenses | Out-Null
+          Copy-Item "${{ steps.binaries.outputs.x64 }}" dist/portable/x64/NiceKey64.exe
+          Copy-Item "${{ steps.binaries.outputs.x86 }}" dist/portable/x86/NiceKey32.exe
+          Copy-Item LICENSE dist/portable/Licenses/LICENSE.txt
+          Copy-Item NOTICE.md dist/portable/Licenses/NOTICE.md
+          Compress-Archive -Path dist/portable/* -DestinationPath dist/NiceKey-1.0.0-Windows-Portable.zip -CompressionLevel Optimal
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { throw "Không tìm thấy Inno Setup compiler" }
+          & $iscc "/DSourceX64=${{ steps.binaries.outputs.x64 }}" "/DSourceX86=${{ steps.binaries.outputs.x86 }}" "/O$((Resolve-Path dist).Path)" Sources/OpenKey/win32/installer/NiceKey.iss
+          if ($LASTEXITCODE -ne 0) { throw "Đóng gói installer thất bại: $LASTEXITCODE" }
+
+      - name: Create checksums
+        shell: pwsh
+        run: |
+          Get-ChildItem dist -File | ForEach-Object {
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($_.Name)" | Add-Content dist/SHA256SUMS-Windows.txt
+          }
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: NiceKey-1.0.0-Windows
+          path: |
+            dist/NiceKey-1.0.0-Windows-Setup.exe
+            dist/NiceKey-1.0.0-Windows-Portable.zip
+            dist/SHA256SUMS-Windows.txt
+          if-no-files-found: error
+          retention-days: 14
+

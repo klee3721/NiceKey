@@ -95,14 +95,14 @@ BEGIN
     LTEXT           "NiceKey",IDC_STATIC_APP_TITLE,45,14,206,33,SS_NOPREFIX
     LTEXT           "Bộ gõ Tiếng Việt nguồn mở đa nền tảng",IDC_STATIC_APP_SUB_TITLE,45,40,215,12
     LTEXT           "Phien ban",IDC_STATIC_APP_VERSION,45,52,227,8
-    CONTROL         "<a>Chưa cấu hình</a>",IDC_SYSLINK_HOME_PAGE,
+    CONTROL         "<a>github.com/klee3721/NiceKey</a>",IDC_SYSLINK_HOME_PAGE,
                     "SysLink",WS_TABSTOP,105,79,152,10
     LTEXT           "Trang chủ:",IDC_STATIC_APP_SUB_TITLE2,45,79,47,8
     LTEXT           "Phiên bản mới:",IDC_STATIC_APP_SUB_TITLE3,45,91,58,8
     LTEXT           "Liên hệ:",IDC_STATIC_APP_SUB_TITLE4,45,103,47,8
-    CONTROL         "<a>Chưa cấu hình</a>",IDC_SYSLINK_NEW_VERSION,
+    CONTROL         "<a>github.com/klee3721/NiceKey/releases</a>",IDC_SYSLINK_NEW_VERSION,
                     "SysLink",WS_TABSTOP,105,91,175,10
-    CONTROL         "<a>Chưa cấu hình</a>",IDC_SYSLINK_FANPAGE,
+    CONTROL         "<a>Telegram @kienvu37</a>",IDC_SYSLINK_FANPAGE,
                     "SysLink",WS_TABSTOP,105,104,175,10
     CTEXT           "GPL-3.0, based on OpenKey",IDC_STATIC_APP_SUB_TITLE5,80,142,130,8
     PUSHBUTTON      "Kiểm tra bản mới...",IDC_BUTTON_CHECK_VERSION,44,117,75,14
@@ -110,7 +110,7 @@ END
 
 IDD_DIALOG_MAIN DIALOGEX 0, 0, 297, 261
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "NiceKey 0.1.0 - Bộ gõ Tiếng Việt"
+    CAPTION "NiceKey 1.0.0 - Bộ gõ Tiếng Việt"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     PUSHBUTTON      "Cài đặt gốc",ID_BTN_DEFAULT,113,234,71,20
@@ -252,6 +252,7 @@ BEGIN
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,151,50,119,10
     CONTROL         "Hỗ trợ ứng dụng Metro",IDC_CHECK_SUPPORT_METRO_APP,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,12,119,10
+    PUSHBUTTON      "Lịch sử Clipboard...",IDC_BUTTON_CLIPBOARD_SETTINGS,151,108,91,16
 END
 
 IDD_DIALOG_OLD DIALOGEX 0, 0, 316, 268
@@ -271,17 +272,44 @@ BEGIN
     ICON            IDI_APP_ICON,IDC_STATIC,10,13,20,20
     LTEXT           "NiceKey - Bộ gõ Tiếng Việt nguồn mở",IDC_STATIC_APP_TITLE,39,9,206,8,SS_NOPREFIX
     LTEXT           "Trang chủ",IDC_STATIC_APP_TITLE2,39,19,37,8,SS_NOPREFIX
-    CONTROL         "<a>Chưa cấu hình</a>",IDC_SYSLINK_HOME_PAGE,
+    CONTROL         "<a>github.com/klee3721/NiceKey</a>",IDC_SYSLINK_HOME_PAGE,
                     "SysLink",WS_TABSTOP,81,19,101,10
     LTEXT           "Liên hệ",IDC_STATIC_APP_TITLE3,39,29,37,8,SS_NOPREFIX
-    CONTROL         "<a>Chưa cấu hình</a>",IDC_SYSLINK_FANPAGE,
+    CONTROL         "<a>Telegram @kienvu37</a>",IDC_SYSLINK_FANPAGE,
                     "SysLink",WS_TABSTOP,81,29,184,10
     LTEXT           "NiceKey là phần mềm mã nguồn mở GPL-3.0, được fork từ OpenKey để tiếp tục phát triển riêng.",IDC_STATIC_APP_SUB_TITLE5,39,61,234,28
     LTEXT           "GPL-3.0 - fork từ OpenKey",IDC_STATIC_APP_SUB_TITLE6,39,94,78,8
-    CONTROL         "<a>Chưa cấu hình</a>",IDC_SYSLINK_AUTHOR_EMAIL,
+    CONTROL         "<a>Telegram @kienvu37</a>",IDC_SYSLINK_AUTHOR_EMAIL,
                     "SysLink",WS_TABSTOP,117,94,101,10
     LTEXT           "Phien ban",IDC_STATIC_APP_VERSION_INFO,39,50,227,8
     PUSHBUTTON      "Mã nguồn...",IDC_BUTTON_GO_SOURCE_CODE,226,91,50,14
+END
+
+IDD_DIALOG_CLIPBOARD_SETTINGS DIALOGEX 0, 0, 326, 232
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Lịch sử Clipboard - NiceKey"
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    CONTROL         "Bật lịch sử Clipboard",IDC_CLIPBOARD_ENABLED,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,11,126,11
+    GROUPBOX        "Cửa sổ danh sách",IDC_STATIC,7,29,312,50
+    CONTROL         "Ghim trên cùng",IDC_CLIPBOARD_PIN_ON_TOP,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,17,45,86,11
+    CONTROL         "Tự động ẩn khi mất tiêu điểm",IDC_CLIPBOARD_AUTO_HIDE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,17,62,136,11
+    PUSHBUTTON      "Đặt lại vị trí",IDC_CLIPBOARD_RESET_LAYOUT,234,49,75,16
+    GROUPBOX        "Phím tắt mở danh sách",IDC_STATIC,7,84,312,64
+    CONTROL         "Ctrl",IDC_CLIPBOARD_HOTKEY_CTRL,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,17,101,33,11
+    CONTROL         "Alt",IDC_CLIPBOARD_HOTKEY_ALT,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,55,101,31,11
+    CONTROL         "Win",IDC_CLIPBOARD_HOTKEY_WIN,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,91,101,34,11
+    CONTROL         "Shift",IDC_CLIPBOARD_HOTKEY_SHIFT,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,130,101,39,11
+    EDITTEXT        IDC_CLIPBOARD_HOTKEY_KEY,177,98,52,16,ES_CENTER | ES_READONLY | WS_TABSTOP
+    PUSHBUTTON      "Mặc định",IDC_CLIPBOARD_RESET_HOTKEY,237,98,72,16
+    LTEXT           "Ctrl + Shift + V",IDC_CLIPBOARD_HOTKEY_PREVIEW,17,119,292,12,SS_NOPREFIX
+    LTEXT           "Cần ít nhất một phím chức năng kèm một phím chữ, số hoặc F1-F24.",IDC_STATIC,17,133,292,9
+    GROUPBOX        "Dữ liệu",IDC_STATIC,7,153,312,48
+    LTEXT           "Đang lưu 0/30 mục",IDC_CLIPBOARD_ITEM_COUNT,17,169,112,10
+    PUSHBUTTON      "Xóa lịch sử",IDC_CLIPBOARD_CLEAR,237,166,72,16
+    LTEXT           "Nội dung được ứng dụng đánh dấu nhạy cảm sẽ không được lưu.",IDC_STATIC,17,185,210,9
+    PUSHBUTTON      "Mở danh sách",IDC_CLIPBOARD_OPEN_PICKER,116,208,83,17
+    DEFPUSHBUTTON   "Đóng",IDOK,237,208,72,17
 END
 
 
@@ -405,8 +433,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,0,5,0
- PRODUCTVERSION 2,0,5,0
+ FILEVERSION 1,0,0,0
+ PRODUCTVERSION 1,0,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -423,12 +451,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "NiceKey"
             VALUE "FileDescription", "NiceKey - Bộ gõ Tiếng Việt nguồn mở"
-            VALUE "FileVersion", "0.1.0.0"
+            VALUE "FileVersion", "1.0.0.0"
             VALUE "InternalName", "NiceKey.exe"
             VALUE "LegalCopyright", "GPL-3.0. Original OpenKey copyright (C) 2019 Mai Vu Tuyen"
             VALUE "OriginalFilename", "NiceKey.exe"
             VALUE "ProductName", "NiceKey"
-            VALUE "ProductVersion", "0.1.0.0"
+            VALUE "ProductVersion", "1.0.0.0"
         END
     END
     BLOCK "VarFileInfo"

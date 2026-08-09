@@ -14,6 +14,7 @@ redistribute your new version, it MUST be open source.
 #include "AboutDialog.h"
 #include "ConvertToolDialog.h"
 #include "MacroDialog.h"
+#include "ClipboardHistory.h"
 
 class BaseDialog;
 class AppDelegate {
@@ -46,6 +47,8 @@ public: //event
 	void onTableCode(const int& code);
 
 	void onControlPanel();
+	void onClipboardHistory();
+	void onClipboardHistorySettings();
 	void onOpenKeyAbout();
 	void onOpenKeyExit();
 };

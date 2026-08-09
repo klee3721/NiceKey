@@ -74,18 +74,18 @@ END
 
 IDD_ABOUTBOX DIALOGEX 0, 0, 170, 62
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "About OpenKeyUpdate"
+CAPTION "Giới thiệu NiceKey Update"
 FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     ICON            IDR_MAINFRAME,IDC_STATIC,14,14,21,20
-    LTEXT           "OpenKeyUpdate, Version 1.0",IDC_STATIC,42,14,114,8,SS_NOPREFIX
+    LTEXT           "NiceKey Update, phiên bản 1.0",IDC_STATIC,42,14,114,8,SS_NOPREFIX
     LTEXT           "Copyright (c) 2019",IDC_STATIC,42,26,114,8
     DEFPUSHBUTTON   "OK",IDOK,113,41,50,14,WS_GROUP
 END
 
 IDD_DIALOG_UPDATER DIALOGEX 0, 0, 260, 88
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "Cập nhật OpenKey"
+CAPTION "Cập nhật NiceKey"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     CTEXT           "Đang cập nhật phiên bản mới!",IDC_STATIC,7,33,246,8
@@ -173,13 +173,13 @@ BEGIN
     BEGIN
         BLOCK "040904b0"
         BEGIN
-            VALUE "CompanyName", "The OpenKey Project"
-            VALUE "FileDescription", "Update Helper for OpenKey"
+            VALUE "CompanyName", "NiceKey"
+            VALUE "FileDescription", "Trình hỗ trợ cập nhật NiceKey"
             VALUE "FileVersion", "1.0.0.1"
-            VALUE "InternalName", "OpenKeyUpdate.exe"
-            VALUE "LegalCopyright", "Copyright (C) 2019"
-            VALUE "OriginalFilename", "OpenKeyUpdate.exe"
-            VALUE "ProductName", "OpenKey Auto Update"
+            VALUE "InternalName", "NiceKeyUpdate.exe"
+            VALUE "LegalCopyright", "GPL-3.0. Based on OpenKey copyright (C) 2019 Mai Vu Tuyen"
+            VALUE "OriginalFilename", "NiceKeyUpdate.exe"
+            VALUE "ProductName", "NiceKey Update"
             VALUE "ProductVersion", "1.0.0.1"
         END
     END
@@ -197,8 +197,8 @@ END
 
 STRINGTABLE
 BEGIN
-    IDS_APP_TITLE           "OpenKeyUpdate"
-    IDC_OPENKEYUPDATE       "OPENKEYUPDATE"
+    IDS_APP_TITLE           "NiceKey Update"
+    IDC_OPENKEYUPDATE       "NICEKEYUPDATE"
 END
 
 #endif    // English (United States) resources
@@ -215,4 +215,3 @@ END
 
 /////////////////////////////////////////////////////////////////////////////
 #endif    // not APSTUDIO_INVOKED
-

@@ -50,7 +50,30 @@ void OpenKeyManager::freeEngine() {
 
 bool OpenKeyManager::checkUpdate(string& newVersion) {
 	newVersion.clear();
-	return false;
+	wstring content = OpenKeyHelper::getContentOfUrl(
+		_T("https://raw.githubusercontent.com/klee3721/NiceKey/master/version.json"));
+	if (content.empty()) return false;
+	size_t section = content.find(L"\"latestWinVersion\"");
+	if (section == wstring::npos) return false;
+	size_t codeKey = content.find(L"\"versionCode\"", section);
+	size_t codeColon = codeKey == wstring::npos ? wstring::npos : content.find(L':', codeKey);
+	if (codeColon == wstring::npos) return false;
+	wchar_t* end = nullptr;
+	long versionCode = wcstol(content.c_str() + codeColon + 1, &end, 10);
+	if (end == content.c_str() + codeColon + 1) return false;
+
+	size_t nameKey = content.find(L"\"versionName\"", section);
+	size_t nameColon = nameKey == wstring::npos ? wstring::npos : content.find(L':', nameKey);
+	size_t nameStart = nameColon == wstring::npos ? wstring::npos : content.find(L'\"', nameColon + 1);
+	size_t nameEnd = nameStart == wstring::npos ? wstring::npos : content.find(L'\"', nameStart + 1);
+	if (nameStart != wstring::npos && nameEnd != wstring::npos) {
+		newVersion = wideStringToUtf8(content.substr(nameStart + 1, nameEnd - nameStart - 1));
+	}
+	return versionCode > static_cast<long>(OpenKeyHelper::getVersionNumber());
+}
+
+void OpenKeyManager::openReleasePage() {
+	ShellExecuteW(nullptr, L"open", L"https://github.com/klee3721/NiceKey/releases", nullptr, nullptr, SW_SHOWNORMAL);
 }
 
 void OpenKeyManager::createDesktopShortcut() {

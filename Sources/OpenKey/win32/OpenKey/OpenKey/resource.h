@@ -62,6 +62,7 @@
 #define IDD_DIALOG_TAB_SYSTEM           147
 #define IDD_DIALOG_OLD                  148
 #define IDD_DIALOG_TAB_INFO             149
+#define IDD_DIALOG_CLIPBOARD_SETTINGS   150
 #define IDS_STRING_OTHER_LANGUAGES		150
 #define IDC_COMBO1                      1000
 #define IDC_COMBO_INPUT_TYPE            1000
@@ -182,6 +183,21 @@
 #define IDS_STRING_START_CONSONANT      1066
 #define IDS_STRING_END_CONSONANT        1067
 #define IDC_CHECK_OTHER_LANGUAGES       1068
+#define IDC_CLIPBOARD_ENABLED           1200
+#define IDC_CLIPBOARD_PIN_ON_TOP        1201
+#define IDC_CLIPBOARD_AUTO_HIDE         1202
+#define IDC_CLIPBOARD_HOTKEY_CTRL       1203
+#define IDC_CLIPBOARD_HOTKEY_ALT        1204
+#define IDC_CLIPBOARD_HOTKEY_WIN        1205
+#define IDC_CLIPBOARD_HOTKEY_SHIFT      1206
+#define IDC_CLIPBOARD_HOTKEY_KEY        1207
+#define IDC_CLIPBOARD_HOTKEY_PREVIEW    1208
+#define IDC_CLIPBOARD_ITEM_COUNT        1209
+#define IDC_CLIPBOARD_OPEN_PICKER       1210
+#define IDC_CLIPBOARD_CLEAR             1211
+#define IDC_CLIPBOARD_RESET_LAYOUT      1212
+#define IDC_CLIPBOARD_RESET_HOTKEY      1213
+#define IDC_BUTTON_CLIPBOARD_SETTINGS   1214
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -189,9 +205,9 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        149
+#define _APS_NEXT_RESOURCE_VALUE        151
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1052
+#define _APS_NEXT_CONTROL_VALUE         1215
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

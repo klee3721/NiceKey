@@ -60,6 +60,7 @@ static int _languageTemp = 0; //use for smart switch key
 static vector<Byte> savedSmartSwitchKeyData; ////use for smart switch key
 
 static bool _hasJustUsedHotKey = false;
+static bool _niceKeyEngineSuspended = false;
 
 static INPUT backspaceEvent[2];
 static INPUT keyEvent[2];
@@ -67,6 +68,13 @@ static INPUT keyEvent[2];
 LRESULT CALLBACK keyboardHookProcess(int nCode, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK mouseHookProcess(int nCode, WPARAM wParam, LPARAM lParam);
 VOID CALLBACK winEventProcCallback(HWINEVENTHOOK hWinEventHook, DWORD dwEvent, HWND hwnd, LONG idObject, LONG idChild, DWORD dwEventThread, DWORD dwmsEventTime);
+
+void NiceKeySetEngineSuspended(bool suspended) {
+	_niceKeyEngineSuspended = suspended;
+	_keycode = 0;
+	_lastFlag = 0;
+	if (!suspended) startNewSession();
+}
 
 void OpenKeyFree() {
 	UnhookWindowsHookEx(hMouseHook);
@@ -512,6 +520,19 @@ LRESULT CALLBACK keyboardHookProcess(int nCode, WPARAM wParam, LPARAM lParam) {
 	if (!_isFlagKey && wParam != WM_KEYUP && wParam != WM_SYSKEYUP)
 		_keycode = (Uint16)keyboardData->vkCode;
 
+	if (_niceKeyEngineSuspended) {
+		return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
+	}
+	if ((wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) && !_isFlagKey &&
+		ClipboardHistory::shared().shouldBypassEngineForHotKey(
+			_keycode,
+			(_flag & MASK_CONTROL) != 0,
+			(_flag & MASK_ALT) != 0,
+			(_flag & MASK_WIN) != 0,
+			(_flag & MASK_SHIFT) != 0)) {
+		return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
+	}
+
 	//switch language shortcut; convert hotkey
 	if ((wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) && !_isFlagKey && _keycode != 0) {
 		if (GET_SWITCH_KEY(vSwitchKeyStatus) != _keycode && GET_SWITCH_KEY(convertToolHotKey) != _keycode) {
@@ -645,6 +666,9 @@ LRESULT CALLBACK keyboardHookProcess(int nCode, WPARAM wParam, LPARAM lParam) {
 }
 
 LRESULT CALLBACK mouseHookProcess(int nCode, WPARAM wParam, LPARAM lParam) {
+	if (_niceKeyEngineSuspended) {
+		return CallNextHookEx(hMouseHook, nCode, wParam, lParam);
+	}
 	mouseData = (MSLLHOOKSTRUCT *)lParam;
 	switch (wParam) {
 	case WM_LBUTTONDOWN:

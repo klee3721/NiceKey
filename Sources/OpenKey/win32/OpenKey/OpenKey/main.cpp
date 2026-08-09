@@ -18,7 +18,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 						_In_ int       nCmdShow)
 {
 	UNREFERENCED_PARAMETER(hPrevInstance);
-	UNREFERENCED_PARAMETER(lpCmdLine);
+	if (lpCmdLine && wcsstr(lpCmdLine, L"--self-test")) {
+		return ClipboardHistory::runSelfTest() ? 0 : 2;
+	}
 	
 #if NDEBUG
 	//check the program is run as administrator mode
