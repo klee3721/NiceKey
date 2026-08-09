@@ -43,10 +43,10 @@ jobs:
           $x64 = Get-ChildItem Sources/OpenKey/win32/OpenKey -Recurse -Filter NiceKey64.exe | Select-Object -First 1
           $x86 = Get-ChildItem Sources/OpenKey/win32/OpenKey -Recurse -Filter NiceKey32.exe | Select-Object -First 1
           if (-not $x64 -or -not $x86) { throw "Không tìm thấy đủ NiceKey64.exe và NiceKey32.exe" }
-          & $x64.FullName --self-test
-          if ($LASTEXITCODE -ne 0) { throw "Self-test x64 thất bại: $LASTEXITCODE" }
-          & $x86.FullName --self-test
-          if ($LASTEXITCODE -ne 0) { throw "Self-test x86 thất bại: $LASTEXITCODE" }
+          $x64Test = Start-Process $x64.FullName -ArgumentList "--self-test" -Wait -PassThru
+          if ($x64Test.ExitCode -ne 0) { throw "Self-test x64 thất bại: $($x64Test.ExitCode)" }
+          $x86Test = Start-Process $x86.FullName -ArgumentList "--self-test" -Wait -PassThru
+          if ($x86Test.ExitCode -ne 0) { throw "Self-test x86 thất bại: $($x86Test.ExitCode)" }
           "x64=$($x64.FullName)" >> $env:GITHUB_OUTPUT
           "x86=$($x86.FullName)" >> $env:GITHUB_OUTPUT
 
@@ -90,4 +90,3 @@ jobs:
             dist/SHA256SUMS-Windows.txt
           if-no-files-found: error
           retention-days: 14
-
