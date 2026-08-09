@@ -19,6 +19,7 @@ redistribute your new version, it MUST be open source.
 #include "targetver.h"
 
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
+#define NOMINMAX                        // Keep Windows macros from shadowing std::min/std::max
 
 // Windows Header Files
 #include <windows.h>

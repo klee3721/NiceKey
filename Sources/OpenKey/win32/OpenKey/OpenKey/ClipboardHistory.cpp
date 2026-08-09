@@ -756,7 +756,7 @@ LRESULT ClipboardHistory::handlePickerWindow(HWND window, UINT message, WPARAM w
 	case WM_CREATE:
 		searchEdit_ = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
 			WS_CHILD | WS_TABSTOP | ES_AUTOHSCROLL, 0, 0, 0, 0,
-			window, reinterpret_cast<HMENU>(kSearchEditId), instance_, nullptr);
+			window, reinterpret_cast<HMENU>(static_cast<INT_PTR>(kSearchEditId)), instance_, nullptr);
 		SetWindowSubclass(searchEdit_, SearchEditProc, 1, reinterpret_cast<DWORD_PTR>(this));
 		SendMessageW(searchEdit_, EM_SETCUEBANNER, TRUE, reinterpret_cast<LPARAM>(L"Tìm trong lịch sử..."));
 		SendMessageW(searchEdit_, EM_SETMARGINS, EC_LEFTMARGIN | EC_RIGHTMARGIN, MAKELPARAM(10, 10));
