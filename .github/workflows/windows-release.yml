@@ -72,13 +72,37 @@ jobs:
           & $iscc "/DSourceX64=${{ steps.binaries.outputs.x64 }}" "/DSourceX86=${{ steps.binaries.outputs.x86 }}" "/O$((Resolve-Path dist).Path)" Sources/OpenKey/win32/installer/NiceKey.iss
           if ($LASTEXITCODE -ne 0) { throw "Đóng gói installer thất bại: $LASTEXITCODE" }
 
+      - name: Smoke-test installer
+        shell: pwsh
+        run: |
+          $setup = (Resolve-Path dist/NiceKey-1.0.0-Windows-Setup.exe).Path
+          $installDir = Join-Path $env:RUNNER_TEMP "NiceKeyInstallTest"
+          $install = Start-Process $setup -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/DIR=$installDir" -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw "Cài đặt NiceKey thất bại: $($install.ExitCode)" }
+
+          $installedApp = Join-Path $installDir "NiceKey.exe"
+          if (-not (Test-Path $installedApp)) { throw "Installer không tạo NiceKey.exe" }
+          if (-not (Test-Path (Join-Path $installDir "Licenses/LICENSE.txt"))) { throw "Installer thiếu LICENSE.txt" }
+          if (-not (Test-Path (Join-Path $installDir "Licenses/NOTICE.md"))) { throw "Installer thiếu NOTICE.md" }
+
+          $selfTest = Start-Process $installedApp -ArgumentList "--self-test" -Wait -PassThru
+          if ($selfTest.ExitCode -ne 0) { throw "Self-test bản đã cài thất bại: $($selfTest.ExitCode)" }
+
+          $uninstaller = Join-Path $installDir "unins000.exe"
+          if (-not (Test-Path $uninstaller)) { throw "Installer không tạo trình gỡ cài đặt" }
+          $uninstall = Start-Process $uninstaller -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait -PassThru
+          if ($uninstall.ExitCode -ne 0) { throw "Gỡ cài đặt NiceKey thất bại: $($uninstall.ExitCode)" }
+
       - name: Create checksums
         shell: pwsh
         run: |
+          $lines = @()
           Get-ChildItem dist -File | ForEach-Object {
             $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-            "$hash  $($_.Name)" | Add-Content dist/SHA256SUMS-Windows.txt
+            $lines += "$hash  $($_.Name)"
           }
+          $content = ($lines -join "`n") + "`n"
+          [IO.File]::WriteAllText((Join-Path $PWD "dist/SHA256SUMS-Windows.txt"), $content, [Text.UTF8Encoding]::new($false))
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4

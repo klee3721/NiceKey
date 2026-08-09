@@ -990,7 +990,10 @@ void ClipboardHistory::paintPicker(HDC dc) {
 	SetTextColor(dc, RGB(0, 120, 215));
 	DrawTextW(dc, L"\xE8C8", -1, &iconRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
 
-	RECT titleRect = { scaled(pickerWindow_, 48), 0, client.right / 2, header.bottom };
+	bool showCount = !items_.empty() && client.right >= scaled(pickerWindow_, 460);
+	int controlsBoundary = static_cast<int>(client.right) - scaled(pickerWindow_, items_.empty() ? 120 : 202);
+	int titleRight = controlsBoundary - (showCount ? scaled(pickerWindow_, 58) : 0);
+	RECT titleRect = { scaled(pickerWindow_, 48), 0, std::max(scaled(pickerWindow_, 120), titleRight), header.bottom };
 	SelectObject(dc, titleFont_);
 	SetTextColor(dc, RGB(27, 27, 27));
 	DrawTextW(dc, L"Lịch sử Clipboard", -1, &titleRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
@@ -1021,10 +1024,10 @@ void ClipboardHistory::paintPicker(HDC dc) {
 	SetTextColor(dc, RGB(95, 95, 99));
 	DrawTextW(dc, L"\xE8BB", -1, &closeButtonRect_, DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
 
-	if (!items_.empty()) {
+	if (showCount) {
 		wchar_t countText[32] = {};
 		wsprintfW(countText, L"%d mục", static_cast<int>(items_.size()));
-		RECT countRect = { std::max(static_cast<int>(titleRect.right), right - scaled(pickerWindow_, 70)), 0, right, header.bottom };
+		RECT countRect = { titleRect.right + scaled(pickerWindow_, 4), 0, right, header.bottom };
 		SelectObject(dc, captionFont_);
 		SetTextColor(dc, RGB(105, 105, 108));
 		DrawTextW(dc, countText, -1, &countRect, DT_RIGHT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);

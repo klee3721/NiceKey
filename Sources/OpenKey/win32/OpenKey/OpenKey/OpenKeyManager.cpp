@@ -69,6 +69,11 @@ bool OpenKeyManager::checkUpdate(string& newVersion) {
 	if (nameStart != wstring::npos && nameEnd != wstring::npos) {
 		newVersion = wideStringToUtf8(content.substr(nameStart + 1, nameEnd - nameStart - 1));
 	}
+	int major = 0, minor = 0, patch = 0;
+	if (sscanf_s(newVersion.c_str(), "%d.%d.%d", &major, &minor, &patch) == 3) {
+		DWORD packedVersion = static_cast<DWORD>(major | (minor << 8) | (patch << 16));
+		return packedVersion > OpenKeyHelper::getVersionNumber();
+	}
 	return versionCode > static_cast<long>(OpenKeyHelper::getVersionNumber());
 }
 
