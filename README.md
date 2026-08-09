@@ -1,6 +1,6 @@
 # NiceKey
 
-[Tải cho macOS (.dmg)](https://github.com/klee3721/NiceKey/releases/download/v1.0.0/NiceKey-1.0.0.dmg) | [Tải cho Windows (.exe)](https://github.com/klee3721/NiceKey/releases/download/v1.0.0/NiceKey-1.0.0-Windows-Setup.exe)
+[Tải cho macOS (.dmg)](https://github.com/klee3721/NiceKey/releases/download/v1.0.0/NiceKey-1.0.0.dmg) | [Tải cho Windows (.exe)](https://github.com/klee3721/NiceKey/releases/download/v1.0.1/NiceKey-1.0.1-Windows-Setup.exe)
 
 NiceKey là bộ gõ tiếng Việt nguồn mở cho macOS và Windows, được phát triển từ nền tảng OpenKey. Mục tiêu của NiceKey là giữ lại phần lõi gõ tiếng Việt ổn định, nhẹ và quen thuộc, đồng thời tách thành một nhánh phát triển riêng với trải nghiệm cài đặt, nhận diện app và cấu hình phát hành rõ ràng hơn.
 
@@ -37,9 +37,11 @@ Mở file `.dmg`, kéo `NiceKey.app` vào thư mục `Applications`, sau đó m�
 
 ## Cài đặt Windows
 
-Tải [NiceKey-1.0.0-Windows-Setup.exe](https://github.com/klee3721/NiceKey/releases/download/v1.0.0/NiceKey-1.0.0-Windows-Setup.exe), mở bộ cài và chọn `Mở NiceKey` sau khi hoàn tất. Bản cài hỗ trợ Windows 10 phiên bản 1809 trở lên và Windows 11, tự chọn executable x64 hoặc x86 phù hợp.
+Tải [NiceKey-1.0.1-Windows-Setup.exe](https://github.com/klee3721/NiceKey/releases/download/v1.0.1/NiceKey-1.0.1-Windows-Setup.exe), mở bộ cài và chọn `Mở NiceKey` sau khi hoàn tất. Bản cài hỗ trợ Windows 10 phiên bản 1809 trở lên và Windows 11, tự chọn executable x64 hoặc x86 phù hợp.
 
-Trong menu biểu tượng NiceKey ở khay hệ thống, chọn `Lịch sử Clipboard` để mở danh sách hoặc `Cài đặt Clipboard...` để đổi phím tắt. Phím mặc định trên Windows là `Ctrl+Shift+V`.
+Phím chuyển chế độ Việt/Anh mặc định là `Ctrl+Shift`. Người dùng có thể chọn hai hay nhiều phím bổ trợ và để trống ô phím chính để dùng chính tổ hợp đó.
+
+Trong menu biểu tượng NiceKey ở khay hệ thống, chọn `Lịch sử Clipboard` để mở danh sách hoặc `Cài đặt Clipboard...` để đổi phím tắt. Phím mở lịch sử Clipboard mặc định là `Ctrl+Shift+V`.
 
 ## Build macOS
 

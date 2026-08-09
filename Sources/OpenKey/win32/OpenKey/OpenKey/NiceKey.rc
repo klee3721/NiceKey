@@ -110,7 +110,7 @@ END
 
 IDD_DIALOG_MAIN DIALOGEX 0, 0, 297, 261
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
-    CAPTION "NiceKey 1.0.0 - Bộ gõ Tiếng Việt"
+    CAPTION "NiceKey 1.0.1 - Bộ gõ Tiếng Việt"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     PUSHBUTTON      "Cài đặt gốc",ID_BTN_DEFAULT,113,234,71,20
@@ -433,8 +433,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,0,0
- PRODUCTVERSION 1,0,0,0
+ FILEVERSION 1,0,1,0
+ PRODUCTVERSION 1,0,1,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -451,12 +451,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "NiceKey"
             VALUE "FileDescription", "NiceKey - Bộ gõ Tiếng Việt nguồn mở"
-            VALUE "FileVersion", "1.0.0.0"
+            VALUE "FileVersion", "1.0.1.0"
             VALUE "InternalName", "NiceKey.exe"
             VALUE "LegalCopyright", "GPL-3.0. Original OpenKey copyright (C) 2019 Mai Vu Tuyen"
             VALUE "OriginalFilename", "NiceKey.exe"
             VALUE "ProductName", "NiceKey"
-            VALUE "ProductVersion", "1.0.0.0"
+            VALUE "ProductVersion", "1.0.1.0"
         END
     END
     BLOCK "VarFileInfo"
@@ -532,7 +532,7 @@ END
 
 STRINGTABLE
 BEGIN
-    IDS_STRING_SWITCH_KEY   "Nhập phím chuyển hoặc để trống"
+    IDS_STRING_SWITCH_KEY   "Nhập phím bổ sung; để trống để chỉ dùng tổ hợp Ctrl/Alt/Win/Shift đã chọn"
     IDS_STRING_BEEP         "Kêu tiếng bíp mỗi khi chuyển chế độ gõ, không áp dụng với Loại trừ ứng dụng thông minh"
     IDS_STRING_VIET         "Bật chế độ gõ Tiếng Việt"
     IDS_STRING_ENG          "Bật chế độ gõ Tiếng Anh"

@@ -19,7 +19,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 {
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	if (lpCmdLine && wcsstr(lpCmdLine, L"--self-test")) {
-		return ClipboardHistory::runSelfTest() ? 0 : 2;
+		return ClipboardHistory::runSelfTest() && NiceKeyRunSwitchHotKeySelfTest() ? 0 : 2;
 	}
 	
 #if NDEBUG

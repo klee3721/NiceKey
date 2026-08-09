@@ -20,8 +20,7 @@ int vCodeTable = 0;
 int vCheckSpelling = 1;
 int vUseModernOrthography = 1;
 int vQuickTelex = 0;
-#define DEFAULT_SWITCH_STATUS 0x5A00025A //default option + z
-int vSwitchKeyStatus = DEFAULT_SWITCH_STATUS;
+int vSwitchKeyStatus = NICEKEY_DEFAULT_SWITCH_STATUS;
 int vRestoreIfWrongSpelling = 1;
 int vFixRecommendBrowser = 0;
 int vUseMacro = 1;
@@ -173,7 +172,7 @@ void AppDelegate::onDefaultConfig() {
 	APP_SET_DATA(vCheckSpelling, 1);
 	APP_SET_DATA(vUseModernOrthography, 0);
 	APP_SET_DATA(vQuickTelex, 0);
-	APP_SET_DATA(vSwitchKeyStatus, DEFAULT_SWITCH_STATUS);
+	APP_SET_DATA(vSwitchKeyStatus, NICEKEY_DEFAULT_SWITCH_STATUS);
 	APP_SET_DATA(vRestoreIfWrongSpelling, 1);
 	APP_SET_DATA(vFixRecommendBrowser, 1);
 	APP_SET_DATA(vUseMacro, 0);

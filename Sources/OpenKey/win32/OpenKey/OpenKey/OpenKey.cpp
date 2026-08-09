@@ -26,6 +26,21 @@ redistribute your new version, it MUST be open source.
 #define DYNA_DATA(macro, pos) (macro ? pData->macroData[pos] : pData->charData[pos])
 #define EMPTY_HOTKEY 0xFE0000FE
 
+static constexpr int kLegacyWindowsSwitchStatus = 0x5A00025A; // Alt + Z
+static constexpr int kLegacyMacKeyCodeSwitchStatus = 0x7A000206;
+
+static int normalizeSwitchKeyStatus(int status) {
+	if (status == 0 || status == kLegacyWindowsSwitchStatus || status == kLegacyMacKeyCodeSwitchStatus) {
+		return NICEKEY_DEFAULT_SWITCH_STATUS;
+	}
+	if (GET_SWITCH_KEY(status) == 0) {
+		status &= 0x00FFFF00;
+		status |= NICEKEY_EMPTY_SWITCH_KEY;
+		status |= static_cast<int>(static_cast<unsigned int>(NICEKEY_EMPTY_SWITCH_KEY) << 24);
+	}
+	return status;
+}
+
 static vector<string> _chromiumBrowser = {
 	"chrome.exe", "brave.exe", "msedge.exe"
 };
@@ -90,7 +105,11 @@ void OpenKeyInit() {
 	APP_GET_DATA(vCheckSpelling, 1);
 	APP_GET_DATA(vUseModernOrthography, 0);
 	APP_GET_DATA(vQuickTelex, 0);
-	APP_GET_DATA(vSwitchKeyStatus, 0x7A000206);
+	int savedSwitchKeyStatus = OpenKeyHelper::getRegInt(_T("vSwitchKeyStatus"), NICEKEY_DEFAULT_SWITCH_STATUS);
+	vSwitchKeyStatus = normalizeSwitchKeyStatus(savedSwitchKeyStatus);
+	if (vSwitchKeyStatus != savedSwitchKeyStatus) {
+		OpenKeyHelper::setRegInt(_T("vSwitchKeyStatus"), vSwitchKeyStatus);
+	}
 	APP_GET_DATA(vRestoreIfWrongSpelling, 1);
 	APP_GET_DATA(vFixRecommendBrowser, 1);
 	APP_GET_DATA(vUseMacro, 1);
@@ -401,6 +420,28 @@ bool checkHotKey(int hotKeyData, bool checkKeyCode = true) {
 			return false;
 	}
 	return true;
+}
+
+bool NiceKeyRunSwitchHotKeySelfTest() {
+	if (normalizeSwitchKeyStatus(kLegacyWindowsSwitchStatus) != NICEKEY_DEFAULT_SWITCH_STATUS) return false;
+	if (normalizeSwitchKeyStatus(kLegacyMacKeyCodeSwitchStatus) != NICEKEY_DEFAULT_SWITCH_STATUS) return false;
+	if (normalizeSwitchKeyStatus(0x00000900) != NICEKEY_DEFAULT_SWITCH_STATUS) return false;
+	if (GET_SWITCH_KEY(NICEKEY_DEFAULT_SWITCH_STATUS) != NICEKEY_EMPTY_SWITCH_KEY) return false;
+	if (!HAS_CONTROL(NICEKEY_DEFAULT_SWITCH_STATUS) || !HAS_SHIFT(NICEKEY_DEFAULT_SWITCH_STATUS) ||
+		HAS_OPTION(NICEKEY_DEFAULT_SWITCH_STATUS) || HAS_COMMAND(NICEKEY_DEFAULT_SWITCH_STATUS)) return false;
+
+	Uint32 previousLastFlag = _lastFlag;
+	Uint16 previousKeyCode = _keycode;
+	_lastFlag = MASK_CONTROL | MASK_SHIFT;
+	_keycode = 0;
+	bool exactMatch = checkHotKey(NICEKEY_DEFAULT_SWITCH_STATUS, false);
+	_lastFlag = MASK_CONTROL;
+	bool rejectsMissingModifier = !checkHotKey(NICEKEY_DEFAULT_SWITCH_STATUS, false);
+	_lastFlag = MASK_CONTROL | MASK_SHIFT | MASK_ALT;
+	bool rejectsExtraModifier = !checkHotKey(NICEKEY_DEFAULT_SWITCH_STATUS, false);
+	_lastFlag = previousLastFlag;
+	_keycode = previousKeyCode;
+	return exactMatch && rejectsMissingModifier && rejectsExtraModifier;
 }
 
 void switchLanguage() {

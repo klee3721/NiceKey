@@ -98,6 +98,7 @@ void MainControlDialog::initDialog() {
     createToolTip(checkShift, IDS_STRING_SHIFT);
 
     textSwitchKey = GetDlgItem(hDlg, IDC_SWITCH_KEY_KEY);
+    SendMessage(textSwitchKey, EM_SETLIMITTEXT, 1, 0);
     createToolTip(textSwitchKey, IDS_STRING_SWITCH_KEY);
 
     checkBeep = GetDlgItem(hDlg, IDC_CHECK_SWITCH_KEY_BEEP);
@@ -250,10 +251,16 @@ INT_PTR MainControlDialog::eventProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM
                 this->onCheckboxClicked((HWND)lParam);
             }
             else if (HIWORD(wParam) == EN_CHANGE) {
-                _lastKeyCode = OpenKeyManager::_lastKeyCode;
-                if (_lastKeyCode > 0) {
+                HWND edit = (HWND)lParam;
+                if (edit == textSwitchKey && GetWindowTextLengthW(edit) == 0) {
                     OpenKeyManager::_lastKeyCode = 0;
-                    this->onCharacter((HWND)lParam, _lastKeyCode);
+                    setSwitchKey(NICEKEY_EMPTY_SWITCH_KEY);
+                } else {
+                    _lastKeyCode = OpenKeyManager::_lastKeyCode;
+                    if (_lastKeyCode > 0) {
+                        OpenKeyManager::_lastKeyCode = 0;
+                        this->onCharacter(edit, _lastKeyCode);
+                    }
                 }
             }
             break;
@@ -567,7 +574,7 @@ void MainControlDialog::onCharacter(const HWND& hWnd, const UINT16& keyCode) {
     if (hWnd == textSwitchKey) {
         UINT16 code = GET_SWITCH_KEY(vSwitchKeyStatus);
         if (keyCode == VK_DELETE || keyCode == VK_BACK) {
-            code = 0xFE;
+            code = NICEKEY_EMPTY_SWITCH_KEY;
         }
         else if (keyCodeToCharacter(keyCode) != 0) {
             code = keyCode;
@@ -581,7 +588,7 @@ void MainControlDialog::setSwitchKeyText(const HWND& hWnd, const UINT16& keyCode
     if (keyCode == KEY_SPACE) {
         SetWindowText(hWnd, _T("Space"));
     }
-    else if (keyCode == 0xFE) {
+    else if (keyCode == NICEKEY_EMPTY_SWITCH_KEY) {
         SetWindowText(hWnd, _T(""));
     }
     else {

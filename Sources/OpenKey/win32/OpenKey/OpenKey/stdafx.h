@@ -55,7 +55,11 @@ extern wchar_t _logBuffer[1024];
 
 #define APP_CLASS _T("NiceKeyVietnameseInputMethod")
 
+constexpr int NICEKEY_EMPTY_SWITCH_KEY = 0xFE;
+constexpr int NICEKEY_DEFAULT_SWITCH_STATUS = static_cast<int>(0xFE0009FEu); // Ctrl + Shift, no main key
+
 extern void saveSmartSwitchKeyData();
+extern bool NiceKeyRunSwitchHotKeySelfTest();
 
 extern int vLanguage;
 extern int vInputType;

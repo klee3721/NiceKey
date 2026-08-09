@@ -6,6 +6,7 @@ Thư mục này chứa bản NiceKey cho Windows, sử dụng lõi gõ tiếng V
 
 - Bộ gõ Telex, VNI, Simple Telex và các bảng mã có sẵn từ lõi OpenKey.
 - Gõ tắt, chuyển mã, ghi nhớ chế độ theo ứng dụng và khởi động cùng Windows.
+- Chuyển chế độ Việt/Anh mặc định bằng `Ctrl+Shift`; tổ hợp chỉ gồm các phím bổ trợ được hỗ trợ khi ô phím chính để trống.
 - Lịch sử Clipboard tối đa 30 mục, hỗ trợ văn bản và ảnh, tìm kiếm không dấu, chọn bằng chuột hoặc bàn phím, ghim và tự ẩn.
 - Phím tắt lịch sử Clipboard có thể cấu hình; mặc định là `Ctrl+Shift+V`.
 - Dữ liệu và cấu hình riêng trong `%LOCALAPPDATA%\NiceKey` và `HKCU\Software\NiceKey`.
