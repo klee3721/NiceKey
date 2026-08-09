@@ -76,6 +76,7 @@ extern int vUseMacroInEnglishMode;
 extern int vAutoCapsMacro;
 extern int vSendKeyStepByStep;
 extern int vUseSmartSwitchKey;
+extern int vUseManualAppExclusion;
 extern int vUpperCaseFirstChar;
 extern int vUseGrayIcon;
 extern int vShowOnStartUp;

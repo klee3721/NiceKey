@@ -28,6 +28,7 @@ int vUseMacroInEnglishMode = 1;
 int vAutoCapsMacro = 0;
 int vSendKeyStepByStep = 1;
 int vUseSmartSwitchKey = 1;
+int vUseManualAppExclusion = 0;
 int vUpperCaseFirstChar = 0;
 int vTempOffSpelling = 0;
 int vAllowConsonantZFWJ = 0;
@@ -179,6 +180,7 @@ void AppDelegate::onDefaultConfig() {
 	APP_SET_DATA(vUseMacroInEnglishMode, 0);
 	APP_SET_DATA(vSendKeyStepByStep, 1);
 	APP_SET_DATA(vUseSmartSwitchKey, 1);
+	APP_SET_DATA(vUseManualAppExclusion, 0);
 	APP_SET_DATA(vUpperCaseFirstChar, 0);
 	APP_SET_DATA(vAllowConsonantZFWJ, 0);
 	APP_SET_DATA(vTempOffSpelling, 0);

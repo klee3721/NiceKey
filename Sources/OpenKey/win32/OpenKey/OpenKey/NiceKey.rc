@@ -110,7 +110,7 @@ END
 
 IDD_DIALOG_MAIN DIALOGEX 0, 0, 297, 261
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
-    CAPTION "NiceKey 1.0.1 - Bộ gõ Tiếng Việt"
+    CAPTION "NiceKey 1.1.0 - Bộ gõ Tiếng Việt"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     PUSHBUTTON      "Cài đặt gốc",ID_BTN_DEFAULT,113,234,71,20
@@ -201,12 +201,14 @@ BEGIN
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,151,69,123,10
     CONTROL         "Loại trừ ứng dụng thông minh",IDC_CHECK_SMART_SWITCH_KEY,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,69,111,10
+    CONTROL         "Loại trừ ứng dụng thủ công",IDC_CHECK_MANUAL_APP_EXCLUSION,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,88,124,10
     CONTROL         "Viết Hoa chữ cái đầu câu",IDC_CHECK_CAPS_FIRST_CHAR,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,50,95,10
     CONTROL         "Tự ghi nhớ bảng mã theo ứng dụng",IDC_CHECK_SMART_SWITCH_CODE,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,88,130,10
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,151,106,130,10
     CONTROL         "Cho phép gõ trong các ngôn ngữ khác",IDC_CHECK_OTHER_LANGUAGES,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,106,204,10
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,106,140,10
     CONTROL         "Tạm tắt NiceKey bằng phím Alt",IDC_CHECK_TEMP_OFF_OPEN_KEY,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,151,88,123,10
 END
@@ -253,6 +255,21 @@ BEGIN
     CONTROL         "Hỗ trợ ứng dụng Metro",IDC_CHECK_SUPPORT_METRO_APP,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,12,119,10
     PUSHBUTTON      "Lịch sử Clipboard...",IDC_BUTTON_CLIPBOARD_SETTINGS,151,108,91,16
+END
+
+IDD_DIALOG_TAB_APP_EXCLUSIONS DIALOGEX 0, 0, 283, 119
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD
+EXSTYLE WS_EX_TRANSPARENT
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "Ứng dụng đã loại trừ",IDC_STATIC,7,4,99,8
+    LISTBOX         IDC_LIST_EXCLUDED_APPS,7,14,220,37,LBS_NOINTEGRALHEIGHT | LBS_NOTIFY | WS_BORDER | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "Bỏ",IDC_BUTTON_REMOVE_EXCLUDED_APP,233,14,40,14
+    CONTROL         "",IDC_STATIC,"Static",SS_ETCHEDHORZ,7,56,266,1
+    LTEXT           "Ứng dụng đang mở",IDC_STATIC,7,62,99,8
+    LISTBOX         IDC_LIST_RUNNING_APPS,7,72,220,40,LBS_NOINTEGRALHEIGHT | LBS_NOTIFY | WS_BORDER | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "Thêm",IDC_BUTTON_ADD_EXCLUDED_APP,233,72,40,14
+    PUSHBUTTON      "Làm mới",IDC_BUTTON_REFRESH_RUNNING_APPS,233,91,40,14
 END
 
 IDD_DIALOG_OLD DIALOGEX 0, 0, 316, 268
@@ -433,8 +450,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,1,0
- PRODUCTVERSION 1,0,1,0
+ FILEVERSION 1,1,0,0
+ PRODUCTVERSION 1,1,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -451,12 +468,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "NiceKey"
             VALUE "FileDescription", "NiceKey - Bộ gõ Tiếng Việt nguồn mở"
-            VALUE "FileVersion", "1.0.1.0"
+            VALUE "FileVersion", "1.1.0.0"
             VALUE "InternalName", "NiceKey.exe"
             VALUE "LegalCopyright", "GPL-3.0. Original OpenKey copyright (C) 2019 Mai Vu Tuyen"
             VALUE "OriginalFilename", "NiceKey.exe"
             VALUE "ProductName", "NiceKey"
-            VALUE "ProductVersion", "1.0.1.0"
+            VALUE "ProductVersion", "1.1.0.0"
         END
     END
     BLOCK "VarFileInfo"
@@ -502,6 +519,8 @@ BEGIN
                             "Tự động viết hoa sau dấu chấm ngắt câu và sau khi xuống dòng"
     IDS_STRING_SMART_SWITCH_KEY 
                             "Bạn đang sử dụng Chrome và dùng chế độ gõ Tiếng Việt, bạn chuyển qua Command Prompt và chuyển chế độ gõ qua Tiếng Anh, NiceKey sẽ tự ghi nhớ thao tác cho bạn, khi bạn chuyển về lại Chrome, NiceKey sẽ tự chuyển sang chế độ Tiếng Việt, sau đó nếu lại quay lại Command Prompt, NiceKey cũng sẽ tự đổi qua chế độ Tiếng Anh"
+    IDS_STRING_MANUAL_APP_EXCLUSION
+                            "Các ứng dụng được chọn trong tab Loại trừ sẽ luôn nhận phím gõ tiếng Anh, ngay cả khi NiceKey đang bật chế độ Tiếng Việt"
     IDS_STRING_SUPPORT_METRO 
                             "Hỗ trợ các ứng dụng Metro như Facebook Messenger, Instargram,..."
     IDS_STRING_RUN_ON_STARTUP "Tự chạy NiceKey khi khởi động Windows"

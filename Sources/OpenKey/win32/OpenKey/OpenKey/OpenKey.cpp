@@ -10,6 +10,7 @@ redistribute your new version, it MUST be open source.
 -----------------------------------------------------------*/
 #include "stdafx.h"
 #include "AppDelegate.h"
+#include "ManualAppExclusion.h"
 
 #pragma comment(lib, "imm32")
 #define IMC_GETOPENSTATUS 0x0005
@@ -121,6 +122,7 @@ void OpenKeyInit() {
 	APP_GET_DATA(vRunWithWindows, 1);
 	OpenKeyHelper::registerRunOnStartup(vRunWithWindows);
 	APP_GET_DATA(vUseSmartSwitchKey, 1);
+	APP_GET_DATA(vUseManualAppExclusion, 0);
 	APP_GET_DATA(vUpperCaseFirstChar, 0);
 	APP_GET_DATA(vAllowConsonantZFWJ, 0);
 	APP_GET_DATA(vTempOffSpelling, 0);
@@ -185,6 +187,7 @@ void OpenKeyInit() {
 	DWORD smartSwitchKeySize;
 	BYTE* data = OpenKeyHelper::getRegBinary(_T("smartSwitchKey"), smartSwitchKeySize);
 	initSmartSwitchKey((Byte*)data, (int)smartSwitchKeySize);
+	ManualAppExclusion::initialize();
 
 	//init hook
 	HINSTANCE hInstance = GetModuleHandle(NULL);
@@ -620,6 +623,12 @@ LRESULT CALLBACK keyboardHookProcess(int nCode, WPARAM wParam, LPARAM lParam) {
 		return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
 	}
 
+	// A manually excluded app always receives the original keystrokes. Global
+	// hotkeys above remain available, but no Vietnamese or macro processing runs.
+	if (vUseManualAppExclusion && ManualAppExclusion::isForegroundExcluded()) {
+		return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
+	}
+
 	//if is in english mode
 	if (vLanguage == 0) {
 		if (vUseMacro && vUseMacroInEnglishMode && (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN)) {
@@ -707,7 +716,8 @@ LRESULT CALLBACK keyboardHookProcess(int nCode, WPARAM wParam, LPARAM lParam) {
 }
 
 LRESULT CALLBACK mouseHookProcess(int nCode, WPARAM wParam, LPARAM lParam) {
-	if (_niceKeyEngineSuspended) {
+	if (_niceKeyEngineSuspended ||
+		(vUseManualAppExclusion && ManualAppExclusion::isForegroundExcluded())) {
 		return CallNextHookEx(hMouseHook, nCode, wParam, lParam);
 	}
 	mouseData = (MSLLHOOKSTRUCT *)lParam;
@@ -734,6 +744,12 @@ LRESULT CALLBACK mouseHookProcess(int nCode, WPARAM wParam, LPARAM lParam) {
 }
 
 VOID CALLBACK winEventProcCallback(HWINEVENTHOOK hWinEventHook, DWORD dwEvent, HWND hwnd, LONG idObject, LONG idChild, DWORD dwEventThread, DWORD dwmsEventTime) {
+	if (vUseManualAppExclusion && ManualAppExclusion::isWindowExcluded(hwnd)) {
+		vTempOffEngine(false);
+		startNewSession();
+		return;
+	}
+
 	//smart switch key
 	if (vUseSmartSwitchKey || vRememberCode) {
 		string& exe = OpenKeyHelper::getFrontMostAppExecuteName();
@@ -761,5 +777,9 @@ VOID CALLBACK winEventProcCallback(HWINEVENTHOOK hWinEventHook, DWORD dwEvent, H
 			SendMessage(HWND_BROADCAST, WM_CHAR, VK_BACK, 0L);
 			SendMessage(HWND_BROADCAST, WM_CHAR, VK_BACK, 0L);
 		}
+	} else if (vUseManualAppExclusion) {
+		// Reset any composition left by the previously focused excluded app.
+		vTempOffEngine(false);
+		startNewSession();
 	}
 }

@@ -10,6 +10,7 @@ redistribute your new version, it MUST be open source.
 -----------------------------------------------------------*/
 #include "stdafx.h"
 #include "AppDelegate.h"
+#include "ManualAppExclusion.h"
 #include <Shlobj.h>
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
@@ -19,7 +20,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 {
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	if (lpCmdLine && wcsstr(lpCmdLine, L"--self-test")) {
-		return ClipboardHistory::runSelfTest() && NiceKeyRunSwitchHotKeySelfTest() ? 0 : 2;
+		return ClipboardHistory::runSelfTest() && NiceKeyRunSwitchHotKeySelfTest() &&
+			ManualAppExclusion::runSelfTest() ? 0 : 2;
 	}
 	
 #if NDEBUG

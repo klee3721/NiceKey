@@ -17,6 +17,14 @@ redistribute your new version, it MUST be open source.
 
 static Uint16 _lastKeyCode;
 
+static wstring appListLabel(const ManualExcludedAppInfo& app) {
+    if (app.displayName.empty() ||
+        CompareStringOrdinal(app.displayName.c_str(), -1, app.executableName.c_str(), -1, TRUE) == CSTR_EQUAL) {
+        return app.executableName;
+    }
+    return app.displayName + L" (" + app.executableName + L")";
+}
+
 MainControlDialog::MainControlDialog(const HINSTANCE& hInstance, const int& resourceId)
     : BaseDialog(hInstance, resourceId) {
 }
@@ -62,17 +70,23 @@ void MainControlDialog::initDialog() {
     TabCtrl_InsertItem(hTab, 1, &tci);
     tci.pszText = (LPWSTR)_T("Hệ thống");
     TabCtrl_InsertItem(hTab, 2, &tci);
-    tci.pszText = (LPWSTR)_T("Thông tin");
+    tci.pszText = (LPWSTR)_T("Loại trừ");
     TabCtrl_InsertItem(hTab, 3, &tci);
+    tci.pszText = (LPWSTR)_T("Thông tin");
+    TabCtrl_InsertItem(hTab, 4, &tci);
     RECT r;
     TabCtrl_GetItemRect(hTab, 0, &r);
-    TabCtrl_SetItemSize(hTab, r.right - r.left, (r.bottom - r.top) * 1.428f);
+    RECT tabClient;
+    GetClientRect(hTab, &tabClient);
+    int tabWidth = (tabClient.right - tabClient.left - 4) / 5;
+    TabCtrl_SetItemSize(hTab, tabWidth, (r.bottom - r.top) * 1.428f);
 
     //create tab page
     hTabPage1 = CreateDialogParam(hIns, MAKEINTRESOURCE(IDD_DIALOG_TAB_GENERAL), hDlg, tabPageEventProc, (LPARAM)this);
     hTabPage2 = CreateDialogParam(hIns, MAKEINTRESOURCE(IDD_DIALOG_TAB_MACRO), hDlg, tabPageEventProc, (LPARAM)this);
     hTabPage3 = CreateDialogParam(hIns, MAKEINTRESOURCE(IDD_DIALOG_TAB_SYSTEM), hDlg, tabPageEventProc, (LPARAM)this);
-    hTabPage4 = CreateDialogParam(hIns, MAKEINTRESOURCE(IDD_DIALOG_TAB_INFO), hDlg, tabPageEventProc, (LPARAM)this);
+    hTabPage4 = CreateDialogParam(hIns, MAKEINTRESOURCE(IDD_DIALOG_TAB_APP_EXCLUSIONS), hDlg, tabPageEventProc, (LPARAM)this);
+    hTabPage5 = CreateDialogParam(hIns, MAKEINTRESOURCE(IDD_DIALOG_TAB_INFO), hDlg, tabPageEventProc, (LPARAM)this);
     RECT rc;//find tab control's rectangle
     GetWindowRect(hTab, &rc);
     POINT offset = { 0 };
@@ -83,6 +97,7 @@ void MainControlDialog::initDialog() {
     SetWindowPos(hTabPage2, 0, rc.left + 1, rc.top + 3, rc.right - rc.left - 5, rc.bottom - rc.top - 6, SWP_HIDEWINDOW);
     SetWindowPos(hTabPage3, 0, rc.left + 1, rc.top + 3, rc.right - rc.left - 5, rc.bottom - rc.top - 6, SWP_HIDEWINDOW);
     SetWindowPos(hTabPage4, 0, rc.left + 1, rc.top + 3, rc.right - rc.left - 5, rc.bottom - rc.top - 6, SWP_HIDEWINDOW);
+    SetWindowPos(hTabPage5, 0, rc.left + 1, rc.top + 3, rc.right - rc.left - 5, rc.bottom - rc.top - 6, SWP_HIDEWINDOW);
     onTabIndexChanged();
 
     checkCtrl = GetDlgItem(hDlg, IDC_CHECK_SWITCH_KEY_CTRL);
@@ -132,6 +147,9 @@ void MainControlDialog::initDialog() {
 
     checkSmartSwitchKey = GetDlgItem(hTabPage1, IDC_CHECK_SMART_SWITCH_KEY);
     createToolTip(checkSmartSwitchKey, IDS_STRING_SMART_SWITCH_KEY);
+
+    checkManualAppExclusion = GetDlgItem(hTabPage1, IDC_CHECK_MANUAL_APP_EXCLUSION);
+    createToolTip(checkManualAppExclusion, IDS_STRING_MANUAL_APP_EXCLUSION);
 
     checkCapsFirstChar = GetDlgItem(hTabPage1, IDC_CHECK_CAPS_FIRST_CHAR);
     createToolTip(checkCapsFirstChar, IDS_STRING_CAPS_FIRST_CHAR);
@@ -198,6 +216,15 @@ void MainControlDialog::initDialog() {
 
     /*------------end tab 3----------------*/
 
+    listExcludedApps = GetDlgItem(hTabPage4, IDC_LIST_EXCLUDED_APPS);
+    listRunningApps = GetDlgItem(hTabPage4, IDC_LIST_RUNNING_APPS);
+    buttonAddExcludedApp = GetDlgItem(hTabPage4, IDC_BUTTON_ADD_EXCLUDED_APP);
+    buttonRemoveExcludedApp = GetDlgItem(hTabPage4, IDC_BUTTON_REMOVE_EXCLUDED_APP);
+    buttonRefreshRunningApps = GetDlgItem(hTabPage4, IDC_BUTTON_REFRESH_RUNNING_APPS);
+    updateAppExclusionButtons();
+
+    /*------------end tab 4----------------*/
+
     SendDlgItemMessage(hDlg, IDBUTTON_OK, BM_SETIMAGE, IMAGE_ICON, (LPARAM)LoadIcon(hIns, MAKEINTRESOURCEW(IDI_ICON_OK_BUTTON)));
     SendDlgItemMessage(hDlg, ID_BTN_DEFAULT, BM_SETIMAGE, IMAGE_ICON, (LPARAM)LoadIcon(hIns, MAKEINTRESOURCEW(IDI_ICON_DEFAULT_BUTTON)));
     SendDlgItemMessage(hDlg, IDBUTTON_EXIT, BM_SETIMAGE, IMAGE_ICON, (LPARAM)LoadIcon(hIns, MAKEINTRESOURCEW(IDI_ICON_EXIT_BUTTON)));
@@ -240,12 +267,28 @@ INT_PTR MainControlDialog::eventProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM
 	    case IDC_BUTTON_CLIPBOARD_SETTINGS:
 	        AppDelegate::getInstance()->onClipboardHistorySettings();
 	        break;
+	    case IDC_BUTTON_ADD_EXCLUDED_APP:
+	        addSelectedRunningApp();
+	        break;
+	    case IDC_BUTTON_REMOVE_EXCLUDED_APP:
+	        removeSelectedExcludedApp();
+	        break;
+	    case IDC_BUTTON_REFRESH_RUNNING_APPS:
+	        refreshAppExclusionLists(true);
+	        break;
 	    case IDC_BUTTON_GO_SOURCE_CODE:
 	        ShellExecuteW(nullptr, L"open", L"https://github.com/klee3721/NiceKey", nullptr, nullptr, SW_SHOWNORMAL);
 	        break;
         default:
             if (HIWORD(wParam) == CBN_SELCHANGE) {
                 this->onComboBoxSelected((HWND)lParam, LOWORD(wParam));
+            }
+            else if (HIWORD(wParam) == LBN_SELCHANGE) {
+                updateAppExclusionButtons();
+            }
+            else if (HIWORD(wParam) == LBN_DBLCLK) {
+                if ((HWND)lParam == listRunningApps) addSelectedRunningApp();
+                else if ((HWND)lParam == listExcludedApps) removeSelectedExcludedApp();
             }
             else if (HIWORD(wParam) == BN_CLICKED) {
                 this->onCheckboxClicked((HWND)lParam);
@@ -358,6 +401,7 @@ void MainControlDialog::fillData() {
     SendMessage(checkTempOffOpenKey, BM_SETCHECK, vTempOffOpenKey ? 1 : 0, 0);
 
     SendMessage(checkSmartSwitchKey, BM_SETCHECK, vUseSmartSwitchKey ? 1 : 0, 0);
+    SendMessage(checkManualAppExclusion, BM_SETCHECK, vUseManualAppExclusion ? 1 : 0, 0);
     SendMessage(checkCapsFirstChar, BM_SETCHECK, vUpperCaseFirstChar ? 1 : 0, 0);
     SendMessage(checkQuickTelex, BM_SETCHECK, vQuickTelex ? 1 : 0, 0);
     SendMessage(checkUseMacro, BM_SETCHECK, vUseMacro ? 1 : 0, 0);
@@ -379,7 +423,7 @@ void MainControlDialog::fillData() {
     //tab info
     wchar_t buffer[256];
     wsprintfW(buffer, _T("Phiên bản %s cho Windows - Ngày cập nhật: %s"), OpenKeyHelper::getVersionString().c_str(), _T(__DATE__));
-    SendDlgItemMessage(hTabPage4, IDC_STATIC_APP_VERSION_INFO, WM_SETTEXT, 0, LPARAM(buffer));
+    SendDlgItemMessage(hTabPage5, IDC_STATIC_APP_VERSION_INFO, WM_SETTEXT, 0, LPARAM(buffer));
 }
 
 void MainControlDialog::setSwitchKey(const unsigned short& code) {
@@ -489,6 +533,11 @@ void MainControlDialog::onCheckboxClicked(const HWND& hWnd) {
     else if (hWnd == checkSmartSwitchKey) {
         val = (int)SendMessage(hWnd, BM_GETCHECK, 0, 0);
         APP_SET_DATA(vUseSmartSwitchKey, val ? 1 : 0);
+    }
+    else if (hWnd == checkManualAppExclusion) {
+        val = (int)SendMessage(hWnd, BM_GETCHECK, 0, 0);
+        APP_SET_DATA(vUseManualAppExclusion, val ? 1 : 0);
+        startNewSession();
     }
     else if (hWnd == checkCapsFirstChar) {
         val = (int)SendMessage(hWnd, BM_GETCHECK, 0, 0);
@@ -603,6 +652,65 @@ void MainControlDialog::onTabIndexChanged() {
     ShowWindow(hTabPage2, (index == 1) ? SW_SHOW : SW_HIDE);
     ShowWindow(hTabPage3, (index == 2) ? SW_SHOW : SW_HIDE);
     ShowWindow(hTabPage4, (index == 3) ? SW_SHOW : SW_HIDE);
+    ShowWindow(hTabPage5, (index == 4) ? SW_SHOW : SW_HIDE);
+    if (index == 3) refreshAppExclusionLists(true);
+}
+
+void MainControlDialog::refreshAppExclusionLists(bool reloadRunningApps) {
+    if (reloadRunningApps || allRunningAppItems.empty()) {
+        allRunningAppItems = ManualAppExclusion::runningApplications();
+    }
+    selectedAppItems = ManualAppExclusion::selectedApplications();
+    runningAppItems.clear();
+
+    SendMessage(listExcludedApps, LB_RESETCONTENT, 0, 0);
+    for (const wstring& executableName : selectedAppItems) {
+        ManualExcludedAppInfo selectedInfo = { executableName, executableName };
+        for (const ManualExcludedAppInfo& runningInfo : allRunningAppItems) {
+            if (CompareStringOrdinal(executableName.c_str(), -1,
+                runningInfo.executableName.c_str(), -1, TRUE) == CSTR_EQUAL) {
+                selectedInfo = runningInfo;
+                break;
+            }
+        }
+        wstring label = appListLabel(selectedInfo);
+        SendMessage(listExcludedApps, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(label.c_str()));
+    }
+
+    SendMessage(listRunningApps, LB_RESETCONTENT, 0, 0);
+    for (const ManualExcludedAppInfo& app : allRunningAppItems) {
+        if (ManualAppExclusion::contains(app.executableName)) continue;
+        runningAppItems.push_back(app);
+        wstring label = appListLabel(app);
+        SendMessage(listRunningApps, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(label.c_str()));
+    }
+    updateAppExclusionButtons();
+}
+
+void MainControlDialog::updateAppExclusionButtons() {
+    if (!buttonAddExcludedApp || !buttonRemoveExcludedApp) return;
+    EnableWindow(buttonAddExcludedApp, SendMessage(listRunningApps, LB_GETCURSEL, 0, 0) != LB_ERR);
+    EnableWindow(buttonRemoveExcludedApp, SendMessage(listExcludedApps, LB_GETCURSEL, 0, 0) != LB_ERR);
+}
+
+void MainControlDialog::addSelectedRunningApp() {
+    LRESULT selectedIndex = SendMessage(listRunningApps, LB_GETCURSEL, 0, 0);
+    if (selectedIndex == LB_ERR || static_cast<size_t>(selectedIndex) >= runningAppItems.size()) return;
+
+    if (ManualAppExclusion::add(runningAppItems[static_cast<size_t>(selectedIndex)].executableName)) {
+        APP_SET_DATA(vUseManualAppExclusion, 1);
+        SendMessage(checkManualAppExclusion, BM_SETCHECK, BST_CHECKED, 0);
+        refreshAppExclusionLists(false);
+    }
+}
+
+void MainControlDialog::removeSelectedExcludedApp() {
+    LRESULT selectedIndex = SendMessage(listExcludedApps, LB_GETCURSEL, 0, 0);
+    if (selectedIndex == LB_ERR || static_cast<size_t>(selectedIndex) >= selectedAppItems.size()) return;
+
+    if (ManualAppExclusion::remove(selectedAppItems[static_cast<size_t>(selectedIndex)])) {
+        refreshAppExclusionLists(false);
+    }
 }
 
 void MainControlDialog::onUpdateButton() {

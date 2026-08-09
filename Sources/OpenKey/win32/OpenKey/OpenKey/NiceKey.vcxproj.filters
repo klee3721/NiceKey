@@ -60,6 +60,9 @@
     <ClInclude Include="MainControlDialog.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ManualAppExclusion.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="OpenKeyManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -120,6 +123,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MainControlDialog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ManualAppExclusion.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="OpenKeyManager.cpp">
