@@ -194,13 +194,25 @@ wstring OpenKeyHelper::getClipboardText(const int& type) {
 
 void OpenKeyHelper::setClipboardText(LPCTSTR data, const int & len, const int& type) {
 	HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, len * sizeof(WCHAR));
-	memcpy(GlobalLock(hMem), data, len * sizeof(WCHAR));
+	if (!hMem) return;
+	void* destination = GlobalLock(hMem);
+	if (!destination) {
+		GlobalFree(hMem);
+		return;
+	}
+	memcpy(destination, data, len * sizeof(WCHAR));
 	GlobalUnlock(hMem);
-	OpenClipboard(0);
+	if (!OpenClipboard(0)) {
+		GlobalFree(hMem);
+		return;
+	}
 	EmptyClipboard();
-	SetClipboardData(type, hMem);
-	HGLOBAL marker = GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, sizeof(DWORD));
-	if (marker) SetClipboardData(CF_OPENKEY, marker);
+	if (!SetClipboardData(type, hMem)) {
+		GlobalFree(hMem);
+	} else {
+		HGLOBAL marker = GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, sizeof(DWORD));
+		if (marker && !SetClipboardData(CF_OPENKEY, marker)) GlobalFree(marker);
+	}
 	CloseClipboard();
 }
 

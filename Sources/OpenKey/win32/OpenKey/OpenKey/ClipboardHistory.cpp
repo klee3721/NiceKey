@@ -31,6 +31,7 @@ namespace {
 	const UINT_PTR kPasteTimer = 2;
 	const int kSearchEditId = 5100;
 	const size_t kMaxImageBytes = 12 * 1024 * 1024;
+	const size_t kMaxTextCharacters = 4 * 1024 * 1024;
 	const uint32_t kHistoryVersion = 1;
 	const char kHistoryMagic[4] = { 'N', 'K', 'C', 'H' };
 
@@ -56,6 +57,13 @@ namespace {
 		return attributes != INVALID_FILE_ATTRIBUTES && !(attributes & FILE_ATTRIBUTE_DIRECTORY);
 	}
 
+	bool isSafeImageFileName(const std::wstring& name) {
+		return name.size() > 9 && name.size() < 96 && name.rfind(L"clip-", 0) == 0 &&
+			name.compare(name.size() - 4, 4, L".dib") == 0 &&
+			name.find_first_of(L"\\/") == std::wstring::npos &&
+			name.find(L"..") == std::wstring::npos;
+	}
+
 	bool writeString(std::ofstream& stream, const std::wstring& value) {
 		uint32_t length = static_cast<uint32_t>(value.size());
 		stream.write(reinterpret_cast<const char*>(&length), sizeof(length));
@@ -68,7 +76,7 @@ namespace {
 	bool readString(std::ifstream& stream, std::wstring& value) {
 		uint32_t length = 0;
 		stream.read(reinterpret_cast<char*>(&length), sizeof(length));
-		if (!stream.good() || length > 16 * 1024 * 1024) return false;
+		if (!stream.good() || length > kMaxTextCharacters) return false;
 		value.resize(length);
 		if (length > 0) {
 			stream.read(reinterpret_cast<char*>(&value[0]), length * sizeof(wchar_t));
@@ -332,6 +340,8 @@ std::wstring ClipboardHistory::keyDescription(UINT virtualKey) {
 }
 
 std::wstring ClipboardHistory::hotKeyDescription() const {
+	UINT key = static_cast<UINT>(hotKey_ & 0xFF);
+	if (key == 0 || key == 0xFE) return L"Chưa đặt";
 	std::wstring result;
 	auto append = [&result](const wchar_t* value) {
 		if (!result.empty()) result += L" + ";
@@ -341,11 +351,8 @@ std::wstring ClipboardHistory::hotKeyDescription() const {
 	if (hotKey_ & 0x200) append(L"Alt");
 	if (hotKey_ & 0x400) append(L"Win");
 	if (hotKey_ & 0x800) append(L"Shift");
-	UINT key = static_cast<UINT>(hotKey_ & 0xFF);
-	if (key != 0 && key != 0xFE) {
-		std::wstring description = keyDescription(key);
-		append(description.c_str());
-	}
+	std::wstring description = keyDescription(key);
+	append(description.c_str());
 	return result.empty() ? L"Chưa đặt" : result;
 }
 
@@ -441,14 +448,25 @@ bool ClipboardHistory::captureClipboard() {
 	std::wstring source = sourceApplicationName();
 	HANDLE textHandle = GetClipboardData(CF_UNICODETEXT);
 	if (textHandle) {
+		SIZE_T byteSize = GlobalSize(textHandle);
 		const wchar_t* text = static_cast<const wchar_t*>(GlobalLock(textHandle));
-		if (text) {
-			std::wstring value(text);
+		if (text && byteSize >= sizeof(wchar_t)) {
+			size_t capacity = byteSize / sizeof(wchar_t);
+			size_t length = 0;
+			while (length < capacity && text[length] != L'\0') ++length;
+			bool valid = length < capacity && length <= kMaxTextCharacters;
+			std::wstring value;
+			if (valid) value.assign(text, length);
 			GlobalUnlock(textHandle);
+			if (!valid) {
+				CloseClipboard();
+				return true;
+			}
 			CloseClipboard();
 			if (!value.empty()) addText(value, source);
 			return true;
 		}
+		if (text) GlobalUnlock(textHandle);
 	}
 
 	UINT imageFormat = IsClipboardFormatAvailable(CF_DIBV5) ? CF_DIBV5 :
@@ -597,11 +615,13 @@ std::wstring ClipboardHistory::dataDirectory() const {
 }
 
 std::wstring ClipboardHistory::historyFilePath() const {
-	return joinPath(dataDirectory(), L"history.dat");
+	std::wstring directory = dataDirectory();
+	return directory.empty() ? L"" : joinPath(directory, L"history.dat");
 }
 
 std::wstring ClipboardHistory::imagePath(const NiceKeyClipItem& item) const {
-	return joinPath(dataDirectory(), item.imageFile);
+	std::wstring directory = dataDirectory();
+	return directory.empty() ? L"" : joinPath(directory, item.imageFile);
 }
 
 void ClipboardHistory::deleteImageFile(const NiceKeyClipItem& item) const {
@@ -656,7 +676,8 @@ void ClipboardHistory::loadItems() {
 		if (!stream.good() || type > static_cast<uint32_t>(NiceKeyClipItem::Type::Image) ||
 			!readString(stream, item.text) || !readString(stream, item.sourceApp) || !readString(stream, item.imageFile)) break;
 		item.type = static_cast<NiceKeyClipItem::Type>(type);
-		if (item.type == NiceKeyClipItem::Type::Image && !fileExists(imagePath(item))) continue;
+		if (item.type == NiceKeyClipItem::Type::Image &&
+			(!isSafeImageFileName(item.imageFile) || !fileExists(imagePath(item)))) continue;
 		items_.push_back(item);
 	}
 	rebuildFilter();
@@ -891,7 +912,9 @@ LRESULT CALLBACK ClipboardHistory::SearchEditProc(HWND window, UINT message, WPA
 }
 
 bool ClipboardHistory::preTranslateMessage(MSG& message) {
-	if (pickerWindow_ && (message.message == WM_KEYDOWN || message.message == WM_SYSKEYDOWN)) {
+	bool messageBelongsToPicker = pickerWindow_ &&
+		(message.hwnd == pickerWindow_ || IsChild(pickerWindow_, message.hwnd));
+	if (messageBelongsToPicker && (message.message == WM_KEYDOWN || message.message == WM_SYSKEYDOWN)) {
 		UINT key = static_cast<UINT>(message.wParam);
 		if (key == VK_DOWN) { moveSelection(1); return true; }
 		if (key == VK_UP) { moveSelection(-1); return true; }
@@ -1242,7 +1265,7 @@ bool ClipboardHistory::placeItemOnClipboard(const NiceKeyClipItem& item) {
 	}
 	if (success && internalClipboardFormat_) {
 		HGLOBAL marker = GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, sizeof(DWORD));
-		if (marker) SetClipboardData(internalClipboardFormat_, marker);
+		if (marker && !SetClipboardData(internalClipboardFormat_, marker)) GlobalFree(marker);
 	}
 	ignoreNextClipboardChange_ = success;
 	CloseClipboard();
@@ -1481,7 +1504,11 @@ void ClipboardHistory::updateSettingsDialog() {
 	CheckDlgButton(settingsWindow_, IDC_CLIPBOARD_HOTKEY_SHIFT, hotKey_ & 0x800 ? BST_CHECKED : BST_UNCHECKED);
 	SetDlgItemTextW(settingsWindow_, IDC_CLIPBOARD_HOTKEY_KEY, keyDescription(hotKey_ & 0xFF).c_str());
 	std::wstring description = hotKeyDescription();
-	if (enabled_ && !hotKeyRegistered_) description += L" (đang bị ứng dụng khác sử dụng)";
+	UINT key = static_cast<UINT>(hotKey_ & 0xFF);
+	bool hasKey = key != 0 && key != 0xFE;
+	bool hasModifier = (hotKey_ & 0xF00) != 0;
+	if (enabled_ && hasKey && !hasModifier) description += L" (cần phím bổ trợ)";
+	else if (enabled_ && hasKey && hasModifier && !hotKeyRegistered_) description += L" (đang bị ứng dụng khác sử dụng)";
 	SetDlgItemTextW(settingsWindow_, IDC_CLIPBOARD_HOTKEY_PREVIEW, description.c_str());
 	wchar_t count[64] = {};
 	wsprintfW(count, L"Đang lưu %d/%d mục", static_cast<int>(items_.size()), kMaxItems);
@@ -1525,5 +1552,7 @@ bool ClipboardHistory::runSelfTest() {
 	if (folded.find(L"khong duoc") == std::wstring::npos) return false;
 	if (cleanDisplayText(L"  một\n\nđoạn\t văn bản  ") != L"một đoạn văn bản") return false;
 	if (keyDescription(L'V') != L"V") return false;
+	ClipboardHistory history;
+	if (history.hotKeyDescription() != L"Ctrl + Shift + V") return false;
 	return true;
 }
