@@ -961,12 +961,12 @@ void ClipboardHistory::layoutPicker() {
 	int footerHeight = scaled(pickerWindow_, 38);
 	rowHeight_ = scaled(pickerWindow_, 68);
 	listTop_ = headerHeight + searchHeight;
-	listBottom_ = std::max(listTop_, client.bottom - footerHeight);
+	listBottom_ = std::max(listTop_, static_cast<int>(client.bottom) - footerHeight);
 	if (searchEdit_) {
 		if (items_.empty()) ShowWindow(searchEdit_, SW_HIDE);
 		else {
 			SetWindowPos(searchEdit_, nullptr, scaled(pickerWindow_, 16), headerHeight + scaled(pickerWindow_, 10),
-				std::max(80, client.right - scaled(pickerWindow_, 32)), scaled(pickerWindow_, 32),
+				std::max(80, static_cast<int>(client.right) - scaled(pickerWindow_, 32)), scaled(pickerWindow_, 32),
 				SWP_NOZORDER | SWP_SHOWWINDOW);
 		}
 	}
@@ -1024,7 +1024,7 @@ void ClipboardHistory::paintPicker(HDC dc) {
 	if (!items_.empty()) {
 		wchar_t countText[32] = {};
 		wsprintfW(countText, L"%d mục", static_cast<int>(items_.size()));
-		RECT countRect = { std::max(titleRect.right, right - scaled(pickerWindow_, 70)), 0, right, header.bottom };
+		RECT countRect = { std::max(static_cast<int>(titleRect.right), right - scaled(pickerWindow_, 70)), 0, right, header.bottom };
 		SelectObject(dc, captionFont_);
 		SetTextColor(dc, RGB(105, 105, 108));
 		DrawTextW(dc, countText, -1, &countRect, DT_RIGHT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
