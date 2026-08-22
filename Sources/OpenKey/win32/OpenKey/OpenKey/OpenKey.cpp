@@ -54,6 +54,7 @@ extern int vRunWithWindows;
 static HHOOK hKeyboardHook;
 static HHOOK hMouseHook;
 static HWINEVENTHOOK hSystemEvent;
+static UINT_PTR hHookWatchdogTimer;
 static KBDLLHOOKSTRUCT* keyboardData;
 static MSLLHOOKSTRUCT* mouseData;
 static vKeyHookState* pData;
@@ -77,6 +78,15 @@ static vector<Byte> savedSmartSwitchKeyData; ////use for smart switch key
 
 static bool _hasJustUsedHotKey = false;
 static bool _niceKeyEngineSuspended = false;
+static bool _hookRefreshPending = false;
+static ULONGLONG _lastHookWatchdogTick = 0;
+static ULONGLONG _lastHookRefreshTick = 0;
+
+static constexpr UINT kHookWatchdogIntervalMs = 1000;
+static constexpr ULONGLONG kHookWatchdogStallMs = 1500;
+static constexpr ULONGLONG kHookPeriodicRefreshMs = 30000;
+static constexpr DWORD kHookRefreshIdleMs = 500;
+static constexpr UINT kImeStatusTimeoutMs = 50;
 
 static INPUT backspaceEvent[2];
 static INPUT keyEvent[2];
@@ -84,6 +94,87 @@ static INPUT keyEvent[2];
 LRESULT CALLBACK keyboardHookProcess(int nCode, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK mouseHookProcess(int nCode, WPARAM wParam, LPARAM lParam);
 VOID CALLBACK winEventProcCallback(HWINEVENTHOOK hWinEventHook, DWORD dwEvent, HWND hwnd, LONG idObject, LONG idChild, DWORD dwEventThread, DWORD dwmsEventTime);
+
+static void synchronizeModifierState() {
+	_flag = 0;
+	if ((GetAsyncKeyState(VK_LSHIFT) & 0x8000) || (GetAsyncKeyState(VK_RSHIFT) & 0x8000)) _flag |= MASK_SHIFT;
+	if ((GetAsyncKeyState(VK_LCONTROL) & 0x8000) || (GetAsyncKeyState(VK_RCONTROL) & 0x8000)) _flag |= MASK_CONTROL;
+	if ((GetAsyncKeyState(VK_LMENU) & 0x8000) || (GetAsyncKeyState(VK_RMENU) & 0x8000)) _flag |= MASK_ALT;
+	if ((GetAsyncKeyState(VK_LWIN) & 0x8000) || (GetAsyncKeyState(VK_RWIN) & 0x8000)) _flag |= MASK_WIN;
+	if (GetKeyState(VK_NUMLOCK) & 0x01) _flag |= MASK_NUMLOCK;
+	if (GetKeyState(VK_CAPITAL) & 0x01) _flag |= MASK_CAPITAL;
+	if (GetKeyState(VK_SCROLL) & 0x01) _flag |= MASK_SCROLL;
+}
+
+static bool refreshLowLevelHooks() {
+	HINSTANCE instance = GetModuleHandle(nullptr);
+	HHOOK newKeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, keyboardHookProcess, instance, 0);
+	if (!newKeyboardHook) return false;
+
+	HHOOK newMouseHook = SetWindowsHookEx(WH_MOUSE_LL, mouseHookProcess, instance, 0);
+	if (!newMouseHook) {
+		UnhookWindowsHookEx(newKeyboardHook);
+		return false;
+	}
+
+	HHOOK oldKeyboardHook = hKeyboardHook;
+	HHOOK oldMouseHook = hMouseHook;
+	hKeyboardHook = newKeyboardHook;
+	hMouseHook = newMouseHook;
+	if (oldKeyboardHook) UnhookWindowsHookEx(oldKeyboardHook);
+	if (oldMouseHook) UnhookWindowsHookEx(oldMouseHook);
+
+	synchronizeModifierState();
+	_keycode = 0;
+	_lastFlag = 0;
+	_lastHookRefreshTick = GetTickCount64();
+	return true;
+}
+
+static bool shouldRequestHookRefresh(ULONGLONG elapsed, ULONGLONG sinceLastRefresh) {
+	return elapsed > kHookWatchdogStallMs || sinceLastRefresh >= kHookPeriodicRefreshMs;
+}
+
+static bool isForegroundImeOpen() {
+	HWND foregroundWindow = GetForegroundWindow();
+	HWND imeWindow = ImmGetDefaultIMEWnd(foregroundWindow);
+	if (!imeWindow) return false;
+
+	DWORD_PTR imeStatus = 0;
+	LRESULT delivered = SendMessageTimeout(
+		imeWindow,
+		WM_IME_CONTROL,
+		IMC_GETOPENSTATUS,
+		0,
+		SMTO_ABORTIFHUNG | SMTO_BLOCK,
+		kImeStatusTimeoutMs,
+		&imeStatus);
+	return delivered != 0 && imeStatus != 0;
+}
+
+static void broadcastMetroBackspace() {
+	SendNotifyMessage(HWND_BROADCAST, WM_CHAR, VK_BACK, 0L);
+}
+
+static VOID CALLBACK hookWatchdogProc(HWND, UINT, UINT_PTR, DWORD) {
+	ULONGLONG now = GetTickCount64();
+	ULONGLONG elapsed = now - _lastHookWatchdogTick;
+	_lastHookWatchdogTick = now;
+	if (shouldRequestHookRefresh(elapsed, now - _lastHookRefreshTick)) {
+		_hookRefreshPending = true;
+	}
+	if (!_hookRefreshPending) return;
+
+	LASTINPUTINFO lastInput = { sizeof(lastInput) };
+	if (GetLastInputInfo(&lastInput) && GetTickCount() - lastInput.dwTime < kHookRefreshIdleMs) return;
+	_hookRefreshPending = !refreshLowLevelHooks();
+}
+
+bool NiceKeyRunHookRecoverySelfTest() {
+	return !shouldRequestHookRefresh(kHookWatchdogIntervalMs, kHookWatchdogIntervalMs) &&
+		shouldRequestHookRefresh(kHookWatchdogStallMs + 1, kHookWatchdogIntervalMs) &&
+		shouldRequestHookRefresh(kHookWatchdogIntervalMs, kHookPeriodicRefreshMs);
+}
 
 void NiceKeySetEngineSuspended(bool suspended) {
 	_niceKeyEngineSuspended = suspended;
@@ -93,9 +184,22 @@ void NiceKeySetEngineSuspended(bool suspended) {
 }
 
 void OpenKeyFree() {
-	UnhookWindowsHookEx(hMouseHook);
-	UnhookWindowsHookEx(hKeyboardHook);
-	UnhookWinEvent(hSystemEvent);
+	if (hHookWatchdogTimer) {
+		KillTimer(nullptr, hHookWatchdogTimer);
+		hHookWatchdogTimer = 0;
+	}
+	if (hMouseHook) {
+		UnhookWindowsHookEx(hMouseHook);
+		hMouseHook = nullptr;
+	}
+	if (hKeyboardHook) {
+		UnhookWindowsHookEx(hKeyboardHook);
+		hKeyboardHook = nullptr;
+	}
+	if (hSystemEvent) {
+		UnhookWinEvent(hSystemEvent);
+		hSystemEvent = nullptr;
+	}
 }
 
 void OpenKeyInit() {
@@ -169,14 +273,7 @@ void OpenKeyInit() {
 	backspaceEvent[1].ki.dwExtraInfo = 1;
 
 	//get key state
-	_flag = 0;
-	if (GetKeyState(VK_LSHIFT) < 0 || GetKeyState(VK_RSHIFT) < 0) _flag |= MASK_SHIFT;
-	if (GetKeyState(VK_LCONTROL) < 0 || GetKeyState(VK_RCONTROL) < 0) _flag |= MASK_CONTROL;
-	if (GetKeyState(VK_LMENU) < 0 || GetKeyState(VK_RMENU) < 0) _flag |= MASK_ALT;
-	if (GetKeyState(VK_LWIN) < 0 || GetKeyState(VK_RWIN) < 0) _flag |= MASK_WIN;
-	if (GetKeyState(VK_NUMLOCK) < 0) _flag |= MASK_NUMLOCK;
-	if (GetKeyState(VK_CAPITAL) == 1) _flag |= MASK_CAPITAL;
-	if (GetKeyState(VK_SCROLL) < 0) _flag |= MASK_SCROLL;
+	synchronizeModifierState();
 
 	//init and load macro data
 	DWORD macroDataSize;
@@ -190,10 +287,11 @@ void OpenKeyInit() {
 	ManualAppExclusion::initialize();
 
 	//init hook
+	refreshLowLevelHooks();
 	HINSTANCE hInstance = GetModuleHandle(NULL);
-	hKeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, keyboardHookProcess, hInstance, 0);
-	hMouseHook = SetWindowsHookEx(WH_MOUSE_LL, mouseHookProcess, hInstance, 0);
 	hSystemEvent = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, NULL, winEventProcCallback, 0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
+	_lastHookWatchdogTick = GetTickCount64();
+	hHookWatchdogTimer = SetTimer(nullptr, 0, kHookWatchdogIntervalMs, hookWatchdogProc);
 }
 
 void saveSmartSwitchKeyData() {
@@ -296,8 +394,8 @@ static void SendKeyCode(Uint32 data) {
 static void SendBackspace() {
 	SendInput(2, backspaceEvent, sizeof(INPUT));
 	if (vSupportMetroApp && OpenKeyHelper::getLastAppExecuteName().compare("ApplicationFrameHost.exe") == 0) {//Metro App
-		SendMessage(HWND_BROADCAST, WM_CHAR, VK_BACK, 0L);
-		SendMessage(HWND_BROADCAST, WM_CHAR, VK_BACK, 0L);
+		broadcastMetroBackspace();
+		broadcastMetroBackspace();
 	}
 	if (IS_DOUBLE_CODE(vCodeTable)) { //VNI or Unicode Compound
 		if (_syncKey.back() > 1) {
@@ -306,8 +404,8 @@ static void SendBackspace() {
 			}*/
 			SendInput(2, backspaceEvent, sizeof(INPUT));
 			if (vSupportMetroApp && OpenKeyHelper::getLastAppExecuteName().compare("ApplicationFrameHost.exe") == 0) {//Metro App
-				SendMessage(HWND_BROADCAST, WM_CHAR, VK_BACK, 0L);
-				SendMessage(HWND_BROADCAST, WM_CHAR, VK_BACK, 0L);
+				broadcastMetroBackspace();
+				broadcastMetroBackspace();
 			}
 		}
 		_syncKey.pop_back();
@@ -539,6 +637,9 @@ static bool UnsetModifierMask(const Uint16& vkCode) {
 }
 
 LRESULT CALLBACK keyboardHookProcess(int nCode, WPARAM wParam, LPARAM lParam) {
+	if (nCode < 0) {
+		return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
+	}
 	keyboardData = (KBDLLHOOKSTRUCT *)lParam;
 	//ignore my event
 	if (keyboardData->dwExtraInfo != 0) {
@@ -546,10 +647,7 @@ LRESULT CALLBACK keyboardHookProcess(int nCode, WPARAM wParam, LPARAM lParam) {
 	}
 	
 	//ignore if IME pad is open when typing Japanese/Chinese...
-	HWND hWnd = GetForegroundWindow();
-	HWND hIME = ImmGetDefaultIMEWnd(hWnd);
-	LRESULT isImeON = SendMessage(hIME, WM_IME_CONTROL, IMC_GETOPENSTATUS, 0);
-	if (isImeON) {
+	if (isForegroundImeOpen()) {
 		return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
 	}
 	
@@ -716,6 +814,9 @@ LRESULT CALLBACK keyboardHookProcess(int nCode, WPARAM wParam, LPARAM lParam) {
 }
 
 LRESULT CALLBACK mouseHookProcess(int nCode, WPARAM wParam, LPARAM lParam) {
+	if (nCode < 0) {
+		return CallNextHookEx(hMouseHook, nCode, wParam, lParam);
+	}
 	if (_niceKeyEngineSuspended ||
 		(vUseManualAppExclusion && ManualAppExclusion::isForegroundExcluded())) {
 		return CallNextHookEx(hMouseHook, nCode, wParam, lParam);
@@ -774,8 +875,8 @@ VOID CALLBACK winEventProcCallback(HWINEVENTHOOK hWinEventHook, DWORD dwEvent, H
 			}
 		}
 		if (vSupportMetroApp && exe.compare("ApplicationFrameHost.exe") == 0) {//Metro App
-			SendMessage(HWND_BROADCAST, WM_CHAR, VK_BACK, 0L);
-			SendMessage(HWND_BROADCAST, WM_CHAR, VK_BACK, 0L);
+			broadcastMetroBackspace();
+			broadcastMetroBackspace();
 		}
 	} else if (vUseManualAppExclusion) {
 		// Reset any composition left by the previously focused excluded app.

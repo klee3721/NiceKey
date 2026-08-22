@@ -60,6 +60,7 @@ constexpr int NICEKEY_DEFAULT_SWITCH_STATUS = static_cast<int>(0xFE0009FEu); // 
 
 extern void saveSmartSwitchKeyData();
 extern bool NiceKeyRunSwitchHotKeySelfTest();
+extern bool NiceKeyRunHookRecoverySelfTest();
 
 extern int vLanguage;
 extern int vInputType;

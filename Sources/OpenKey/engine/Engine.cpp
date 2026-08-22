@@ -459,6 +459,7 @@ void startNewSession() {
     hBPC = 0;
     hNCC = 0;
     tempDisableKey = false;
+    _willTempOffEngine = false;
     _stateIndex = 0;
     _hasHandledMacro = false;
     _hasHandleQuickConsonant = false;

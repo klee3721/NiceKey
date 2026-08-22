@@ -1,5 +1,12 @@
 # NiceKey Change Log
 
+## NiceKey 1.1.1
+
+- Tự bật lại CGEventTap khi macOS vô hiệu hóa bộ nghe bàn phím do timeout hoặc thay đổi trạng thái hệ thống.
+- Thêm watchdog tự gắn lại low-level keyboard/mouse hook trên Windows khi luồng nhận phím bị gián đoạn.
+- Giới hạn thời gian truy vấn IME và chuyển broadcast Metro sang bất đồng bộ để callback Windows không bị treo theo ứng dụng khác.
+- Xóa trạng thái tạm tắt bộ gõ khi bắt đầu phiên nhập mới.
+
 ## NiceKey 0.1.0
 
 - Fork từ OpenKey để chuẩn bị phát triển riêng.

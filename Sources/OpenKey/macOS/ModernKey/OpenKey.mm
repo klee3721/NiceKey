@@ -90,6 +90,11 @@ extern "C" {
 
     void NiceKeySetEngineSuspended(BOOL suspended) {
         _niceKeyEngineSuspended = suspended;
+        _keycode = 0;
+        _lastFlag = 0;
+        if (!suspended) {
+            startNewSession();
+        }
     }
     
     void OpenKeyInit() {
@@ -605,6 +610,15 @@ extern "C" {
      * MAIN Callback.
      */
     CGEventRef OpenKeyCallback(CGEventTapProxy proxy, CGEventType type, CGEventRef event, void *refcon) {
+        if (type == kCGEventTapDisabledByTimeout || type == kCGEventTapDisabledByUserInput) {
+            CFMachPortRef *eventTap = static_cast<CFMachPortRef *>(refcon);
+            if (eventTap && *eventTap && CFMachPortIsValid(*eventTap)) {
+                CGEventTapEnable(*eventTap, true);
+            }
+            startNewSession();
+            return event;
+        }
+
         //dont handle my event
         if (CGEventGetIntegerValueField(event, kCGEventSourceStateID) == CGEventSourceGetSourceStateID(myEventSource)) {
             return event;
