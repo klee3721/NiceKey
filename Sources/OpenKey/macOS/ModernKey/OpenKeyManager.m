@@ -31,6 +31,65 @@ static CFMachPortRef      eventTap;
 static CGEventMask        eventMask;
 static CFRunLoopSourceRef runLoopSource;
 
+static NSString * const ManualExcludedAppsDefaultsKey = @"ManualExcludedApps";
+static NSString * const ManualAppBundleIdentifierKey = @"bundleIdentifier";
+static NSString * const ManualAppDisplayNameKey = @"displayName";
+static NSMutableSet<NSString*> *manualExcludedBundleIdentifiers;
+
+static void EnsureManualExcludedApplicationsLoaded(void) {
+    if (manualExcludedBundleIdentifiers) {
+        return;
+    }
+
+    NSArray *storedIdentifiers = [[NSUserDefaults standardUserDefaults] stringArrayForKey:ManualExcludedAppsDefaultsKey];
+    manualExcludedBundleIdentifiers = [[NSMutableSet alloc] init];
+    for (NSString *bundleIdentifier in storedIdentifiers) {
+        if ([bundleIdentifier isKindOfClass:[NSString class]] && bundleIdentifier.length > 0) {
+            [manualExcludedBundleIdentifiers addObject:bundleIdentifier];
+        }
+    }
+}
+
+static void SaveManualExcludedApplications(void) {
+    NSArray *sortedIdentifiers = [[manualExcludedBundleIdentifiers allObjects]
+                                  sortedArrayUsingSelector:@selector(localizedCaseInsensitiveCompare:)];
+    [[NSUserDefaults standardUserDefaults] setObject:sortedIdentifiers forKey:ManualExcludedAppsDefaultsKey];
+}
+
+static NSString *DisplayNameForBundleIdentifier(NSString *bundleIdentifier) {
+    NSArray<NSRunningApplication*> *runningApplications =
+        [NSRunningApplication runningApplicationsWithBundleIdentifier:bundleIdentifier];
+    NSString *displayName = runningApplications.firstObject.localizedName;
+    if (displayName.length > 0) {
+        return displayName;
+    }
+
+    NSURL *applicationURL = [[NSWorkspace sharedWorkspace] URLForApplicationWithBundleIdentifier:bundleIdentifier];
+    NSBundle *applicationBundle = applicationURL ? [NSBundle bundleWithURL:applicationURL] : nil;
+    NSDictionary *localizedInfo = applicationBundle.localizedInfoDictionary;
+    NSDictionary *info = applicationBundle.infoDictionary;
+    displayName = localizedInfo[@"CFBundleDisplayName"] ?: localizedInfo[@"CFBundleName"] ?:
+                  info[@"CFBundleDisplayName"] ?: info[@"CFBundleName"];
+    return displayName.length > 0 ? displayName : bundleIdentifier;
+}
+
+static NSDictionary<NSString*, NSString*> *ManualApplicationInfo(NSString *bundleIdentifier,
+                                                                  NSString *displayName) {
+    return @{ ManualAppBundleIdentifierKey: bundleIdentifier,
+              ManualAppDisplayNameKey: displayName.length > 0 ? displayName : bundleIdentifier };
+}
+
+static NSComparisonResult CompareManualApplicationInfo(NSDictionary<NSString*, NSString*> *left,
+                                                        NSDictionary<NSString*, NSString*> *right) {
+    NSComparisonResult displayNameResult = [left[ManualAppDisplayNameKey]
+                                            localizedCaseInsensitiveCompare:right[ManualAppDisplayNameKey]];
+    if (displayNameResult != NSOrderedSame) {
+        return displayNameResult;
+    }
+    return [left[ManualAppBundleIdentifierKey]
+            localizedCaseInsensitiveCompare:right[ManualAppBundleIdentifierKey]];
+}
+
 +(BOOL)isInited {
     return _isInited;
 }
@@ -161,6 +220,78 @@ static CFRunLoopSourceRef runLoopSource;
         return YES;
     }
     return NO;
+}
+
+#pragma mark -Manual app exclusion
+
++(BOOL)isManualExcludedBundleIdentifier:(NSString*)bundleIdentifier {
+    if (bundleIdentifier.length == 0) {
+        return NO;
+    }
+    EnsureManualExcludedApplicationsLoaded();
+    return [manualExcludedBundleIdentifiers containsObject:bundleIdentifier];
+}
+
++(NSArray<NSDictionary<NSString*, NSString*>*>*)selectedManualExcludedApplications {
+    EnsureManualExcludedApplicationsLoaded();
+    NSMutableArray<NSDictionary<NSString*, NSString*>*> *applications = [[NSMutableArray alloc] init];
+    for (NSString *bundleIdentifier in manualExcludedBundleIdentifiers) {
+        [applications addObject:ManualApplicationInfo(bundleIdentifier,
+                                                       DisplayNameForBundleIdentifier(bundleIdentifier))];
+    }
+    [applications sortUsingComparator:^NSComparisonResult(NSDictionary<NSString*, NSString*> *left,
+                                                           NSDictionary<NSString*, NSString*> *right) {
+        return CompareManualApplicationInfo(left, right);
+    }];
+    return applications;
+}
+
++(NSArray<NSDictionary<NSString*, NSString*>*>*)runningApplicationsForManualExclusion {
+    NSMutableDictionary<NSString*, NSDictionary<NSString*, NSString*>*> *applicationsByIdentifier =
+        [[NSMutableDictionary alloc] init];
+    for (NSRunningApplication *application in [[NSWorkspace sharedWorkspace] runningApplications]) {
+        NSString *bundleIdentifier = application.bundleIdentifier;
+        if (application.terminated || application.activationPolicy != NSApplicationActivationPolicyRegular ||
+            bundleIdentifier.length == 0 || [bundleIdentifier isEqualToString:[[NSBundle mainBundle] bundleIdentifier]]) {
+            continue;
+        }
+        applicationsByIdentifier[bundleIdentifier] = ManualApplicationInfo(bundleIdentifier,
+                                                                             application.localizedName);
+    }
+
+    NSMutableArray<NSDictionary<NSString*, NSString*>*> *applications =
+        [[applicationsByIdentifier allValues] mutableCopy];
+    [applications sortUsingComparator:^NSComparisonResult(NSDictionary<NSString*, NSString*> *left,
+                                                           NSDictionary<NSString*, NSString*> *right) {
+        return CompareManualApplicationInfo(left, right);
+    }];
+    return applications;
+}
+
++(BOOL)addManualExcludedBundleIdentifier:(NSString*)bundleIdentifier {
+    if (bundleIdentifier.length == 0) {
+        return NO;
+    }
+    EnsureManualExcludedApplicationsLoaded();
+    if ([manualExcludedBundleIdentifiers containsObject:bundleIdentifier]) {
+        return NO;
+    }
+    [manualExcludedBundleIdentifiers addObject:bundleIdentifier];
+    SaveManualExcludedApplications();
+    return YES;
+}
+
++(BOOL)removeManualExcludedBundleIdentifier:(NSString*)bundleIdentifier {
+    if (bundleIdentifier.length == 0) {
+        return NO;
+    }
+    EnsureManualExcludedApplicationsLoaded();
+    if (![manualExcludedBundleIdentifiers containsObject:bundleIdentifier]) {
+        return NO;
+    }
+    [manualExcludedBundleIdentifiers removeObject:bundleIdentifier];
+    SaveManualExcludedApplications();
+    return YES;
 }
 
 +(void)showMessage:(NSWindow*)window message:(NSString*)msg subMsg:(NSString*)subMsg {

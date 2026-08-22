@@ -13,6 +13,7 @@
 
 extern AppDelegate* appDelegate;
 extern void OnSpellCheckingChanged(void);
+extern void RefreshManualAppExclusionState(void);
 
 ViewController* viewController;
 extern int vFreeMark;
@@ -26,6 +27,7 @@ extern int vUseMacro;
 extern int vUseMacroInEnglishMode;
 extern int vSendKeyStepByStep;
 extern int vUseSmartSwitchKey;
+extern int vUseManualAppExclusion;
 extern int vUpperCaseFirstChar;
 extern int vTempOffSpelling;
 extern int vAllowConsonantZFWJ;
@@ -49,6 +51,25 @@ extern int vPerformLayoutCompat;
     NSArray* tabviews, *tabbuttons;
     NSRect tabViewRect;
     NSView* tabButtonBackground;
+    NSButton *manualAppExclusionButton;
+    NSButton *tabbuttonExclusions;
+    NSBox *tabviewExclusions;
+    NSTableView *excludedAppsTable;
+    NSTableView *runningAppsTable;
+    NSButton *addExcludedAppButton;
+    NSButton *removeExcludedAppButton;
+    NSButton *refreshRunningAppsButton;
+    NSArray<NSDictionary<NSString*, NSString*>*> *excludedAppItems;
+    NSArray<NSDictionary<NSString*, NSString*>*> *runningAppItems;
+}
+
+static NSString * const ManualAppBundleIdentifierKey = @"bundleIdentifier";
+static NSString * const ManualAppDisplayNameKey = @"displayName";
+
+static void SetViewOriginY(NSView *view, CGFloat originY) {
+    NSRect frame = view.frame;
+    frame.origin.y = originY;
+    view.frame = frame;
 }
 
 - (void)openURLString:(NSString *)urlString {
@@ -70,10 +91,15 @@ extern int vPerformLayoutCompat;
     NSRect parentRect = self.viewParent.frame;
     parentRect.size.height = 490;
     self.viewParent.frame = parentRect;
-    
+
+    [self configureManualAppExclusionCheckbox];
+    tabViewRect = self.tabviewPrimary.frame;
+    [self configureAppExclusionTab];
+    [self configureTabButtons];
+
     //set correct tabgroup
-    tabviews = [NSArray arrayWithObjects:self.tabviewPrimary, self.tabviewMacro, self.tabviewSystem, self.tabviewInfo, nil];
-    tabbuttons = [NSArray arrayWithObjects:self.tabbuttonPrimary, self.tabbuttonMacro, self.tabbuttonSystem, self.tabbuttonInfo, nil];
+    tabviews = @[self.tabviewPrimary, self.tabviewMacro, self.tabviewSystem, tabviewExclusions, self.tabviewInfo];
+    tabbuttons = @[self.tabbuttonPrimary, self.tabbuttonMacro, self.tabbuttonSystem, tabbuttonExclusions, self.tabbuttonInfo];
     NSButton* firstTabButton = [tabbuttons objectAtIndex:0];
     NSRect tabButtonBackgroundRect = firstTabButton.frame;
     for (NSButton* button in tabbuttons) {
@@ -84,7 +110,6 @@ extern int vPerformLayoutCompat;
     [tabButtonBackground setWantsLayer:YES];
     tabButtonBackground.layer.backgroundColor = [[NSColor windowBackgroundColor] CGColor];
     [self.view addSubview:tabButtonBackground];
-    tabViewRect = self.tabviewPrimary.frame;
     for (NSBox* b in tabviews) {
         b.frame = tabViewRect;
     }
@@ -110,6 +135,136 @@ extern int vPerformLayoutCompat;
     [[NSBundle mainBundle] objectForInfoDictionaryKey: @"CFBundleShortVersionString"],
     [[NSBundle mainBundle] objectForInfoDictionaryKey: @"CFBundleVersion"],
     [OpenKeyManager getBuildDate]] ;
+}
+
+- (void)configureManualAppExclusionCheckbox {
+    SetViewOriginY(self.UseModernOrthography, 202);
+    SetViewOriginY(self.FixRecommendBrowser, 171);
+    SetViewOriginY(self.UpperCaseFirstChar, 140);
+    SetViewOriginY(self.AutoRememberSwitchKey, 109);
+    SetViewOriginY(self.RememberTableCode, 47);
+
+    SetViewOriginY(self.CheckSpellingButton, 202);
+    SetViewOriginY(self.RestoreIfInvalidWord, 171);
+    SetViewOriginY(self.AllowZWJF, 140);
+    SetViewOriginY(self.TempOffSpellChecking, 109);
+    SetViewOriginY(self.TempOffOpenKey, 78);
+
+    manualAppExclusionButton = [[NSButton alloc] initWithFrame:NSMakeRect(18, 78, 230, 18)];
+    manualAppExclusionButton.buttonType = NSButtonTypeSwitch;
+    manualAppExclusionButton.title = @"Loại trừ ứng dụng thủ công";
+    manualAppExclusionButton.font = [NSFont systemFontOfSize:[NSFont systemFontSize]];
+    manualAppExclusionButton.toolTip = @"Ứng dụng được chọn trong tab Loại trừ sẽ luôn nhận phím gõ tiếng Anh";
+    manualAppExclusionButton.target = self;
+    manualAppExclusionButton.action = @selector(onManualAppExclusionChanged:);
+    [self.tabviewPrimary.contentView addSubview:manualAppExclusionButton];
+}
+
+- (NSTextField *)sectionLabelWithTitle:(NSString *)title frame:(NSRect)frame {
+    NSTextField *label = [NSTextField labelWithString:title];
+    label.frame = frame;
+    label.font = [NSFont systemFontOfSize:13 weight:NSFontWeightMedium];
+    return label;
+}
+
+- (NSTableView *)applicationTableWithIdentifier:(NSString *)identifier frame:(NSRect)frame
+                                      inContent:(NSView *)contentView {
+    NSScrollView *scrollView = [[NSScrollView alloc] initWithFrame:frame];
+    scrollView.borderType = NSBezelBorder;
+    scrollView.hasVerticalScroller = YES;
+    scrollView.autohidesScrollers = YES;
+
+    NSTableView *tableView = [[NSTableView alloc] initWithFrame:scrollView.contentView.bounds];
+    NSTableColumn *column = [[NSTableColumn alloc] initWithIdentifier:identifier];
+    column.width = NSWidth(scrollView.contentView.bounds);
+    column.resizingMask = NSTableColumnAutoresizingMask;
+    [tableView addTableColumn:column];
+    tableView.headerView = nil;
+    tableView.rowHeight = 22;
+    tableView.usesAlternatingRowBackgroundColors = YES;
+    tableView.allowsMultipleSelection = NO;
+    tableView.delegate = self;
+    tableView.dataSource = self;
+    tableView.target = self;
+    tableView.doubleAction = @selector(onApplicationTableDoubleClick:);
+    scrollView.documentView = tableView;
+    [contentView addSubview:scrollView];
+    return tableView;
+}
+
+- (NSButton *)iconButtonWithImageName:(NSImageName)imageName
+                              toolTip:(NSString *)toolTip
+                               action:(SEL)action
+                                frame:(NSRect)frame {
+    NSButton *button = [NSButton buttonWithImage:[NSImage imageNamed:imageName]
+                                         target:self
+                                         action:action];
+    button.frame = frame;
+    button.bezelStyle = NSBezelStyleRounded;
+    button.imagePosition = NSImageOnly;
+    button.toolTip = toolTip;
+    return button;
+}
+
+- (void)configureAppExclusionTab {
+    tabviewExclusions = [[NSBox alloc] initWithFrame:tabViewRect];
+    tabviewExclusions.boxType = NSBoxCustom;
+    tabviewExclusions.titlePosition = NSNoTitle;
+    tabviewExclusions.cornerRadius = 4;
+    tabviewExclusions.borderColor = NSColor.unemphasizedSelectedContentBackgroundColor;
+    tabviewExclusions.fillColor = NSColor.controlBackgroundColor;
+    [self.view addSubview:tabviewExclusions];
+
+    NSView *contentView = tabviewExclusions.contentView;
+    [contentView addSubview:[self sectionLabelWithTitle:@"Ứng dụng đã loại trừ"
+                                                  frame:NSMakeRect(18, 190, 260, 18)]];
+    excludedAppsTable = [self applicationTableWithIdentifier:@"excludedApplications"
+                                                       frame:NSMakeRect(18, 116, 400, 70)
+                                                   inContent:contentView];
+    removeExcludedAppButton = [self iconButtonWithImageName:NSImageNameRemoveTemplate
+                                                      toolTip:@"Bỏ ứng dụng khỏi danh sách loại trừ"
+                                                      action:@selector(onRemoveExcludedApp:)
+                                                       frame:NSMakeRect(441, 137, 32, 28)];
+    [contentView addSubview:removeExcludedAppButton];
+
+    NSBox *separator = [[NSBox alloc] initWithFrame:NSMakeRect(18, 100, 482, 5)];
+    separator.boxType = NSBoxSeparator;
+    [contentView addSubview:separator];
+
+    [contentView addSubview:[self sectionLabelWithTitle:@"Ứng dụng đang chạy"
+                                                  frame:NSMakeRect(18, 77, 260, 18)]];
+    runningAppsTable = [self applicationTableWithIdentifier:@"runningApplications"
+                                                      frame:NSMakeRect(18, 5, 400, 68)
+                                                  inContent:contentView];
+    addExcludedAppButton = [self iconButtonWithImageName:NSImageNameAddTemplate
+                                                   toolTip:@"Thêm ứng dụng vào danh sách loại trừ"
+                                                   action:@selector(onAddExcludedApp:)
+                                                    frame:NSMakeRect(441, 25, 32, 28)];
+    [contentView addSubview:addExcludedAppButton];
+    refreshRunningAppsButton = [self iconButtonWithImageName:NSImageNameRefreshTemplate
+                                                      toolTip:@"Làm mới danh sách ứng dụng đang chạy"
+                                                       action:@selector(onRefreshRunningApps:)
+                                                        frame:NSMakeRect(478, 25, 32, 28)];
+    [contentView addSubview:refreshRunningAppsButton];
+}
+
+- (void)configureTabButtons {
+    tabbuttonExclusions = [[NSButton alloc] initWithFrame:self.tabbuttonInfo.frame];
+    NSButtonCell *exclusionCell = [self.tabbuttonInfo.cell copy];
+    exclusionCell.title = @"Loại trừ";
+    tabbuttonExclusions.cell = exclusionCell;
+    tabbuttonExclusions.tag = 3;
+    tabbuttonExclusions.target = self;
+    tabbuttonExclusions.action = @selector(onTabButton:);
+    [self.view addSubview:tabbuttonExclusions];
+    self.tabbuttonInfo.tag = 4;
+
+    NSArray<NSButton*> *buttons = @[self.tabbuttonPrimary, self.tabbuttonMacro,
+                                    self.tabbuttonSystem, tabbuttonExclusions, self.tabbuttonInfo];
+    CGFloat originY = self.tabbuttonPrimary.frame.origin.y;
+    for (NSInteger index = 0; index < buttons.count; index++) {
+        buttons[index].frame = NSMakeRect(28 + index * 100, originY, 104, 32);
+    }
 }
 
 - (void)viewDidAppear {
@@ -156,6 +311,10 @@ extern int vPerformLayoutCompat;
     NSButton* button = [tabbuttons objectAtIndex:index];
     [button setState:NSControlStateValueOn];
 
+    if (index == 3) {
+        [self refreshAppExclusionLists:YES];
+    }
+
     [self.view addSubview:tabButtonBackground positioned:NSWindowAbove relativeTo:b];
     for (NSButton* tabButton in tabbuttons) {
         [self.view addSubview:tabButton positioned:NSWindowAbove relativeTo:nil];
@@ -164,6 +323,118 @@ extern int vPerformLayoutCompat;
 
 - (IBAction)onTabButton:(NSButton *)sender {
     [self showTab:sender.tag];
+}
+
+- (NSString *)applicationLabel:(NSDictionary<NSString*, NSString*> *)application {
+    NSString *bundleIdentifier = application[ManualAppBundleIdentifierKey];
+    NSString *displayName = application[ManualAppDisplayNameKey];
+    if (displayName.length == 0 || [displayName caseInsensitiveCompare:bundleIdentifier] == NSOrderedSame) {
+        return bundleIdentifier ?: @"";
+    }
+    return [NSString stringWithFormat:@"%@ (%@)", displayName, bundleIdentifier];
+}
+
+- (void)refreshAppExclusionLists:(BOOL)reloadRunningApplications {
+    excludedAppItems = [OpenKeyManager selectedManualExcludedApplications];
+    if (reloadRunningApplications || !runningAppItems) {
+        NSMutableArray<NSDictionary<NSString*, NSString*>*> *availableApplications = [[NSMutableArray alloc] init];
+        for (NSDictionary<NSString*, NSString*> *application in
+             [OpenKeyManager runningApplicationsForManualExclusion]) {
+            if (![OpenKeyManager isManualExcludedBundleIdentifier:application[ManualAppBundleIdentifierKey]]) {
+                [availableApplications addObject:application];
+            }
+        }
+        runningAppItems = availableApplications;
+    } else {
+        NSMutableArray<NSDictionary<NSString*, NSString*>*> *availableApplications = [runningAppItems mutableCopy];
+        NSIndexSet *selectedIndexes = [availableApplications indexesOfObjectsPassingTest:
+            ^BOOL(NSDictionary<NSString*, NSString*> *application, NSUInteger index, BOOL *stop) {
+                return [OpenKeyManager isManualExcludedBundleIdentifier:application[ManualAppBundleIdentifierKey]];
+            }];
+        [availableApplications removeObjectsAtIndexes:selectedIndexes];
+        runningAppItems = availableApplications;
+    }
+
+    [excludedAppsTable reloadData];
+    [runningAppsTable reloadData];
+    [self updateAppExclusionButtons];
+}
+
+- (void)updateAppExclusionButtons {
+    addExcludedAppButton.enabled = runningAppsTable.selectedRow >= 0;
+    removeExcludedAppButton.enabled = excludedAppsTable.selectedRow >= 0;
+}
+
+- (IBAction)onManualAppExclusionChanged:(NSButton *)sender {
+    vUseManualAppExclusion = sender.state == NSControlStateValueOn ? 1 : 0;
+    [[NSUserDefaults standardUserDefaults] setInteger:vUseManualAppExclusion
+                                               forKey:@"UseManualAppExclusion"];
+    RefreshManualAppExclusionState();
+}
+
+- (IBAction)onAddExcludedApp:(id)sender {
+    NSInteger selectedRow = runningAppsTable.selectedRow;
+    if (selectedRow < 0 || selectedRow >= (NSInteger)runningAppItems.count) {
+        return;
+    }
+
+    NSString *bundleIdentifier = runningAppItems[selectedRow][ManualAppBundleIdentifierKey];
+    if ([OpenKeyManager addManualExcludedBundleIdentifier:bundleIdentifier]) {
+        vUseManualAppExclusion = 1;
+        [[NSUserDefaults standardUserDefaults] setInteger:1 forKey:@"UseManualAppExclusion"];
+        manualAppExclusionButton.state = NSControlStateValueOn;
+        RefreshManualAppExclusionState();
+        [self refreshAppExclusionLists:NO];
+    }
+}
+
+- (IBAction)onRemoveExcludedApp:(id)sender {
+    NSInteger selectedRow = excludedAppsTable.selectedRow;
+    if (selectedRow < 0 || selectedRow >= (NSInteger)excludedAppItems.count) {
+        return;
+    }
+
+    NSString *bundleIdentifier = excludedAppItems[selectedRow][ManualAppBundleIdentifierKey];
+    if ([OpenKeyManager removeManualExcludedBundleIdentifier:bundleIdentifier]) {
+        [self refreshAppExclusionLists:YES];
+        RefreshManualAppExclusionState();
+    }
+}
+
+- (IBAction)onRefreshRunningApps:(id)sender {
+    [self refreshAppExclusionLists:YES];
+}
+
+- (void)onApplicationTableDoubleClick:(NSTableView *)tableView {
+    if (tableView.clickedRow < 0) {
+        return;
+    }
+    [tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:(NSUInteger)tableView.clickedRow]
+           byExtendingSelection:NO];
+    if (tableView == runningAppsTable) {
+        [self onAddExcludedApp:tableView];
+    } else if (tableView == excludedAppsTable) {
+        [self onRemoveExcludedApp:tableView];
+    }
+}
+
+- (NSInteger)numberOfRowsInTableView:(NSTableView *)tableView {
+    return tableView == excludedAppsTable ? excludedAppItems.count : runningAppItems.count;
+}
+
+- (id)tableView:(NSTableView *)tableView
+    objectValueForTableColumn:(NSTableColumn *)tableColumn
+                         row:(NSInteger)row {
+    NSArray<NSDictionary<NSString*, NSString*>*> *applications =
+        tableView == excludedAppsTable ? excludedAppItems : runningAppItems;
+    if (row < 0 || row >= (NSInteger)applications.count) {
+        return @"";
+    }
+    return [self applicationLabel:applications[row]];
+}
+
+- (void)tableViewSelectionDidChange:(NSNotification *)notification {
+    [self updateAppExclusionButtons];
 }
 
 - (IBAction)onInputTypeChanged:(NSPopUpButton *)sender {
@@ -451,6 +722,9 @@ extern int vPerformLayoutCompat;
     
     NSInteger useSmartSwitchKey = [[NSUserDefaults standardUserDefaults] integerForKey:@"UseSmartSwitchKey"];
     self.AutoRememberSwitchKey.state = useSmartSwitchKey ? NSControlStateValueOn : NSControlStateValueOff;
+
+    NSInteger useManualAppExclusion = [[NSUserDefaults standardUserDefaults] integerForKey:@"UseManualAppExclusion"];
+    manualAppExclusionButton.state = useManualAppExclusion ? NSControlStateValueOn : NSControlStateValueOff;
     
     NSInteger upperCaseFirstChar = [[NSUserDefaults standardUserDefaults] integerForKey:@"UpperCaseFirstChar"];
     self.UpperCaseFirstChar.state = upperCaseFirstChar ? NSControlStateValueOn : NSControlStateValueOff;

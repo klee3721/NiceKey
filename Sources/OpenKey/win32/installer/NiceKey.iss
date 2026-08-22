@@ -1,5 +1,5 @@
 #define MyAppName "NiceKey"
-#define MyAppVersion "1.1.1"
+#define MyAppVersion "1.2.0"
 #define MyAppPublisher "NiceKey"
 #define MyAppURL "https://github.com/klee3721/NiceKey"
 

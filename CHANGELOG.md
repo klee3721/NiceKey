@@ -1,5 +1,12 @@
 # NiceKey Change Log
 
+## NiceKey 1.2.0
+
+- Đưa chức năng loại trừ ứng dụng thủ công lên macOS với cùng logic như Windows.
+- Thêm tab quản lý ứng dụng đang chạy và danh sách đã loại trừ trên macOS; hỗ trợ thêm, xóa, làm mới và nhấp đúp.
+- Ứng dụng bị loại trừ luôn nhận phím gõ tiếng Anh trong khi phím tắt toàn cục của NiceKey vẫn hoạt động.
+- Đồng bộ số phiên bản, tài liệu và gói phát hành macOS/Windows ở phiên bản 1.2.0.
+
 ## NiceKey 1.1.1
 
 - Tự bật lại CGEventTap khi macOS vô hiệu hóa bộ nghe bàn phím do timeout hoặc thay đổi trạng thái hệ thống.

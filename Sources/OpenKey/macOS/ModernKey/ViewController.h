@@ -9,7 +9,7 @@
 #import <Cocoa/Cocoa.h>
 #import "MyTextField.h"
 
-@interface ViewController : NSViewController<MyTextFieldDelegate>
+@interface ViewController : NSViewController<MyTextFieldDelegate, NSTableViewDataSource, NSTableViewDelegate>
 @property (strong) IBOutlet NSView *viewParent;
 @property (weak) IBOutlet NSButton *tabbuttonPrimary;
 @property (weak) IBOutlet NSButton *tabbuttonMacro;
@@ -72,4 +72,3 @@
 
 -(void)fillData;
 @end
-

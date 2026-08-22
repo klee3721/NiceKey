@@ -1,12 +1,12 @@
 {
 	"latestVersion": {
-		"versionName": "1.1.1",
-		"versionCode": 4,
-		"downloadURL": "https://github.com/klee3721/NiceKey/releases/download/v1.1.1/NiceKey-1.1.1.dmg"
+		"versionName": "1.2.0",
+		"versionCode": 5,
+		"downloadURL": "https://github.com/klee3721/NiceKey/releases/download/v1.2.0/NiceKey-1.2.0.dmg"
 	},
 	"latestWinVersion": {
-		"versionName": "1.1.1",
-		"versionCode": 4,
-		"downloadURL": "https://github.com/klee3721/NiceKey/releases/download/v1.1.1/NiceKey-1.1.1-Windows-Setup.exe"
+		"versionName": "1.2.0",
+		"versionCode": 5,
+		"downloadURL": "https://github.com/klee3721/NiceKey/releases/download/v1.2.0/NiceKey-1.2.0-Windows-Setup.exe"
 	}
 }

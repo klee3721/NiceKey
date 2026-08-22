@@ -58,7 +58,7 @@ jobs:
           Copy-Item "${{ steps.binaries.outputs.x86 }}" dist/portable/x86/NiceKey32.exe
           Copy-Item LICENSE dist/portable/Licenses/LICENSE.txt
           Copy-Item NOTICE.md dist/portable/Licenses/NOTICE.md
-          Compress-Archive -Path dist/portable/* -DestinationPath dist/NiceKey-1.1.1-Windows-Portable.zip -CompressionLevel Optimal
+          Compress-Archive -Path dist/portable/* -DestinationPath dist/NiceKey-1.2.0-Windows-Portable.zip -CompressionLevel Optimal
 
       - name: Install Inno Setup
         shell: pwsh
@@ -75,7 +75,7 @@ jobs:
       - name: Smoke-test installer
         shell: pwsh
         run: |
-          $setup = (Resolve-Path dist/NiceKey-1.1.1-Windows-Setup.exe).Path
+          $setup = (Resolve-Path dist/NiceKey-1.2.0-Windows-Setup.exe).Path
           $installDir = Join-Path $env:RUNNER_TEMP "NiceKeyInstallTest"
           $install = Start-Process $setup -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/DIR=$installDir" -Wait -PassThru
           if ($install.ExitCode -ne 0) { throw "Cài đặt NiceKey thất bại: $($install.ExitCode)" }
@@ -107,10 +107,10 @@ jobs:
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: NiceKey-1.1.1-Windows
+          name: NiceKey-1.2.0-Windows
           path: |
-            dist/NiceKey-1.1.1-Windows-Setup.exe
-            dist/NiceKey-1.1.1-Windows-Portable.zip
+            dist/NiceKey-1.2.0-Windows-Setup.exe
+            dist/NiceKey-1.2.0-Windows-Portable.zip
             dist/SHA256SUMS-Windows.txt
           if-no-files-found: error
           retention-days: 14

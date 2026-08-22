@@ -25,6 +25,12 @@ typedef void (^CheckNewVersionCallback)(void);
 
 +(BOOL)quickConvert;
 
++(BOOL)isManualExcludedBundleIdentifier:(NSString*)bundleIdentifier;
++(NSArray<NSDictionary<NSString*, NSString*>*>*)selectedManualExcludedApplications;
++(NSArray<NSDictionary<NSString*, NSString*>*>*)runningApplicationsForManualExclusion;
++(BOOL)addManualExcludedBundleIdentifier:(NSString*)bundleIdentifier;
++(BOOL)removeManualExcludedBundleIdentifier:(NSString*)bundleIdentifier;
+
 +(void)checkNewVersion:(NSWindow*)parent callbackFunc:(CheckNewVersionCallback) callback;
 @end
 

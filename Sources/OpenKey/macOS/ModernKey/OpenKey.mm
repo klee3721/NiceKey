@@ -11,6 +11,7 @@
 #import "Engine.h"
 #import "AppDelegate.h"
 #import "ViewController.h"
+#import "OpenKeyManager.h"
 #import "Clipboard/NiceKeyClipboardCompat.h"
 
 #define FRONT_APP [[NSWorkspace sharedWorkspace] frontmostApplication].bundleIdentifier
@@ -47,6 +48,7 @@ extern AppDelegate* appDelegate;
 extern int vSendKeyStepByStep;
 extern int vFixChromiumBrowser;
 extern int vPerformLayoutCompat;
+extern int vUseManualAppExclusion;
 
 extern "C" {
     //app which must sent special empty character
@@ -82,6 +84,7 @@ extern "C" {
     Uint32 _tempChar;
     bool _hasJustUsedHotKey = false;
     bool _niceKeyEngineSuspended = false;
+    bool _frontMostAppManuallyExcluded = false;
 
     int _languageTemp = 0; //use for smart switch key
     vector<Byte> savedSmartSwitchKeyData; ////use for smart switch key
@@ -95,6 +98,17 @@ extern "C" {
         if (!suspended) {
             startNewSession();
         }
+    }
+
+    void RefreshManualAppExclusionState() {
+        NSRunningApplication *frontmostApplication = [[NSWorkspace sharedWorkspace] frontmostApplication];
+        NSString *bundleIdentifier = frontmostApplication.bundleIdentifier;
+        _frontMostAppManuallyExcluded = vUseManualAppExclusion &&
+            bundleIdentifier.length > 0 &&
+            ![bundleIdentifier isEqualToString:OPENKEY_BUNDLE] &&
+            [OpenKeyManager isManualExcludedBundleIdentifier:bundleIdentifier];
+        vTempOffEngine(false);
+        startNewSession();
     }
     
     void OpenKeyInit() {
@@ -111,6 +125,7 @@ extern "C" {
         LOAD_DATA(vAutoCapsMacro, vAutoCapsMacro);
         LOAD_DATA(vSendKeyStepByStep, SendKeyStepByStep);
         LOAD_DATA(vUseSmartSwitchKey, UseSmartSwitchKey);
+        LOAD_DATA(vUseManualAppExclusion, UseManualAppExclusion);
         LOAD_DATA(vUpperCaseFirstChar, UpperCaseFirstChar);
         
         LOAD_DATA(vTempOffSpelling, vTempOffSpelling);
@@ -153,6 +168,7 @@ extern "C" {
         if (convertToolHotKey == 0) {
             convertToolHotKey = EMPTY_HOTKEY;
         }
+        RefreshManualAppExclusionState();
     }
     
     void RequestNewSession() {
@@ -217,8 +233,13 @@ extern "C" {
     
     void OnActiveAppChanged() { //use for smart switch key; improved on Sep 28th, 2019
         queryFrontMostApp();
+        RefreshManualAppExclusionState();
+        if (_frontMostAppManuallyExcluded || (!vUseSmartSwitchKey && !vRememberCode)) {
+            return;
+        }
+
         _languageTemp = getAppInputMethodStatus(string(_frontMostApp.UTF8String), vLanguage | (vCodeTable << 1));
-        if ((_languageTemp & 0x01) != vLanguage) { //for input method
+        if (vUseSmartSwitchKey && (_languageTemp & 0x01) != vLanguage) { //for input method
             if (_languageTemp != -1) {
                 vLanguage = _languageTemp;
                 [appDelegate onImputMethodChanged:NO];
@@ -689,6 +710,12 @@ extern "C" {
             (type != kCGEventLeftMouseDown) && (type != kCGEventRightMouseDown) &&
             (type != kCGEventLeftMouseDragged) && (type != kCGEventRightMouseDragged))
             return event;
+
+        // Global hotkeys above remain active, but excluded apps receive their
+        // original key and mouse events without Vietnamese or macro processing.
+        if (vUseManualAppExclusion && _frontMostAppManuallyExcluded) {
+            return event;
+        }
         
         _proxy = proxy;
         
